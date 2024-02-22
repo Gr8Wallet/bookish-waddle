@@ -1,0 +1,63 @@
+html,
+body {
+  height: 100%;
+  margin: 0;
+  margin-left: auto;
+  margin-right: auto;
+  overflow: hidden;
+}
+#fl-layout-primary {
+  position: relative;
+}
+.fl-annotations {
+  z-index: 99;
+}
+#wrapper {
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+}
+rect.selection {
+  fill-opacity: 0.1;
+  fill: orange!important;
+}
+#controls {
+  display: inline-block;
+  vertical-align: middle;
+  text-align: center;
+}
+.x-highlighter,
+.data-elements .series .line,
+.tick {
+  pointer-events: none;
+}
+.flourish-popup {
+  z-index: 9999;
+}
+.flourish-popup .flourish-popup-content {
+  pointer-events: none !important;
+}
+.flourish-popup .flourish-popup-content a {
+  pointer-events: auto;
+}
+svg .axis text {
+  font-family: inherit, sans-serif;
+}
+#overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+#overlay .boxes {
+  pointer-events: auto;
+}
+.data-elements .series .data-points path {
+  shape-rendering: geometricPrecision;
+  pointer-events: auto;
+}
+svg {
+  display: block;
+}
+
+/*# sourceMappingURL=bundle.css.map */
