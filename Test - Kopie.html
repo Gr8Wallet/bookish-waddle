@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trading Chart Analyse Tool</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<style>
+html, body { margin:0; padding:0; background:black; overflow:hidden; font-family:sans-serif; color:white; height:100%; }
+#toolbar { position: fixed; top:6px; left:6px; background:#000; padding:6px; border-radius:6px; font-size:11px; z-index:10; border:1px solid #222; width:150px; max-width:40vw;}
+#toolbar input,#toolbar select,#toolbar button { width:100%; font-size:11px; background:#000; color:white; border:1px solid #333; margin:2px 0; box-sizing:border-box; padding:4px; }
+@media(max-width:600px){ #toolbar{width:120px; font-size:14px; padding:8px;} #toolbar input,#toolbar select,#toolbar button{font-size:14px; padding:6px;} }
+.icon-bar { position: fixed; right:6px; top:50%; transform: translateY(-50%); z-index:10; }
+.icon-bar a { display:block; text-align:center; padding:10px; font-size:16px; background:#000; border:1px solid #222; margin-bottom:4px; border-radius:4px; }
+.icon-bar a:hover { background:#f7931a; color:black !important; }
+.twitter{color:#1DA1F2;} .google{color:#DB4437;} .youtube{color:#FF0000;} .whatsapp{color:#25D366;} .mail{color:#cccccc;}
+canvas { cursor: crosshair; display:block; }
+#coords { margin-top:4px; font-size:12px; word-break:break-word; }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+<input type="file" id="imageLoader" accept="image/*">
+<input type="color" id="colorPicker" value="#f7931a">
+<input type="range" id="lineWidth" min="1" max="10" value="2">
+<select id="toolSelect">
+<option value="line">Linie</option>
+<option value="free">Freihand</option>
+<option value="rect">Rechteck</option>
+</select>
+<button id="undoBtn">Undo</button>
+<button id="clearBtn">Clear</button>
+<div id="coords">X:0 Y:0</div>
+</div>
+
+<div class="icon-bar">
+<a href="https://twitter.com/WalletGreat" class="twitter" target="_blank"><i class="fa fa-twitter"></i></a>
+<a href="https://g.page/r/CUSsP9ZtpCKSEAI/review" class="google" target="_blank"><i class="fa fa-google"></i></a>
+<a href="https://www.youtube.com/channel/UCT2e84r1GaUktk1chvzSGAA?sub_confirmation=true" class="youtube" target="_blank"><i class="fa fa-youtube"></i></a>
+<a href="#" class="whatsapp" onclick="shareWhatsApp();return false;"><i class="fa fa-whatsapp"></i></a>
+<a href="#" class="mail" onclick="shareEmail();return false;"><i class="fa fa-envelope"></i></a>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+let img = new Image();
+let scale = 1, offsetX = 0, offsetY = 0;
+let tool = "line";
+let shapes = [], previewShape = null, currentPath = [];
+let startX=0, startY=0;
+
+// Mobile Pinch / Pan
+let pointers = {}, pinchStartDist=0, pinchStartScale=1, pinchCenter={x:0,y:0};
+let mode=null;
+
+const colorPicker=document.getElementById("colorPicker");
+const lineWidthInput=document.getElementById("lineWidth");
+const toolSelect=document.getElementById("toolSelect");
+const coordsDisplay=document.getElementById("coords");
+toolSelect.onchange=()=>tool=toolSelect.value;
+
+function resizeCanvas(){ canvas.width=window.innerWidth; canvas.height=window.innerHeight; redraw(); }
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+imageLoader.onchange=e=>{
+  const r=new FileReader();
+  r.onload=ev=>{ img.onload=redraw; img.src=ev.target.result; };
+  r.readAsDataURL(e.target.files[0]);
+};
+
+undoBtn.onclick=()=>{ shapes.pop(); redraw(); };
+clearBtn.onclick=()=>{ shapes=[]; redraw(); };
+
+function drawShape(s){
+  ctx.strokeStyle=s.color;
+  ctx.beginPath();
+  if(s.type==="line"){ctx.lineWidth=s.width/scale; ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2);}
+  if(s.type==="rect"){ctx.lineWidth=s.width/scale; ctx.rect(s.x,s.y,s.w,s.h);}
+  if(s.type==="free"){ctx.moveTo(s.points[0].x,s.points[0].y); s.points.forEach(p=>{ctx.lineWidth=(p.w||s.width)/scale; ctx.lineTo(p.x,p.y);});}
+  ctx.stroke();
+}
+
+function redraw(){
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.setTransform(scale,0,0,scale,offsetX,offsetY);
+  if(img.src) ctx.drawImage(img,0,0);
+  shapes.forEach(drawShape);
+  if(previewShape) drawShape(previewShape);
+}
+
+// -------------------
+// Desktop Mouse Handling
+// -------------------
+let isDrawing=false;
+canvas.addEventListener('mousedown', e=>{
+  if(e.button===0){ // left click -> draw
+    isDrawing=true;
+    startX=(e.offsetX - offsetX)/scale;
+    startY=(e.offsetY - offsetY)/scale;
+    if(tool==="free") currentPath=[{x:startX,y:startY,w:lineWidthInput.value}];
+  } else if(e.button===2){ // right click -> pan
+    mode="pan";
+  }
+});
+canvas.addEventListener('mousemove', e=>{
+  const x=(e.offsetX - offsetX)/scale;
+  const y=(e.offsetY - offsetY)/scale;
+  coordsDisplay.textContent=`X:${x.toFixed(0)} Y:${y.toFixed(0)}`;
+
+  if(isDrawing){
+    if(tool==="line") previewShape={type:"line",x1:startX,y1:startY,x2:x,y2:y,color:colorPicker.value,width:lineWidthInput.value};
+    if(tool==="rect") previewShape={type:"rect",x:startX,y:startY,w:x-startX,h:y-startY,color:colorPicker.value,width:lineWidthInput.value};
+    if(tool==="free"){ currentPath.push({x,y,w:lineWidthInput.value}); previewShape={type:"free",points:[...currentPath],color:colorPicker.value,width:lineWidthInput.value}; }
+    redraw();
+  } else if(mode==="pan"){
+    offsetX+=e.movementX;
+    offsetY+=e.movementY;
+    redraw();
+  }
+});
+canvas.addEventListener('mouseup', e=>{
+  if(isDrawing && previewShape){ shapes.push(previewShape); previewShape=null; currentPath=[]; }
+  isDrawing=false;
+  mode=null;
+});
+canvas.addEventListener('mouseleave', ()=>{ isDrawing=false; mode=null; });
+canvas.oncontextmenu=e=>e.preventDefault();
+canvas.onwheel=e=>{
+  e.preventDefault();
+  const rect=canvas.getBoundingClientRect();
+  const mx=e.clientX-rect.left;
+  const my=e.clientY-rect.top;
+  const factor=e.deltaY<0?1.1:0.9;
+  scale=Math.min(10,Math.max(0.1,scale*factor));
+  offsetX=mx-(mx-offsetX)*factor;
+  offsetY=my-(my-offsetY)*factor;
+  redraw();
+};
+
+// -------------------
+// Mobile Touch Handling
+// -------------------
+canvas.addEventListener('pointerdown', e=>{
+  canvas.setPointerCapture(e.pointerId);
+  pointers[e.pointerId]={x:e.clientX,y:e.clientY};
+  const keys=Object.keys(pointers);
+  if(keys.length===1){
+    startX=(e.clientX-offsetX)/scale;
+    startY=(e.clientY-offsetY)/scale;
+    if(tool==="free") currentPath=[{x:startX,y:startY,w:(e.pressure||0.5)*lineWidthInput.value}];
+    mode="drawOrPan";
+  } else if(keys.length===2){
+    const p1=pointers[keys[0]], p2=pointers[keys[1]];
+    pinchStartDist=Math.hypot(p1.x-p2.x,p1.y-p2.y);
+    pinchStartScale=scale;
+    pinchCenter={x:(p1.x+p2.x)/2,y:(p1.y+p2.y)/2};
+    mode="pinch";
+  }
+});
+canvas.addEventListener('pointermove', e=>{
+  if(!(e.pointerId in pointers)) return;
+  const prev=pointers[e.pointerId];
+  const dx=e.clientX-prev.x, dy=e.clientY-prev.y;
+  pointers[e.pointerId]={x:e.clientX,y:e.clientY};
+  const keys=Object.keys(pointers);
+  if(mode==="pinch" && keys.length===2){
+    const p1=pointers[keys[0]], p2=pointers[keys[1]];
+    const dist=Math.hypot(p1.x-p2.x,p1.y-p2.y);
+    const newScale=Math.min(10,Math.max(0.1,pinchStartScale*dist/pinchStartDist));
+    offsetX=pinchCenter.x-(pinchCenter.x-offsetX)*(newScale/scale);
+    offsetY=pinchCenter.y-(pinchCenter.y-offsetY)*(newScale/scale);
+    scale=newScale;
+    redraw();
+  } else if(mode==="drawOrPan" && keys.length===1){
+    const x=(e.clientX-offsetX)/scale;
+    const y=(e.clientY-offsetY)/scale;
+    coordsDisplay.textContent=`X:${x.toFixed(0)} Y:${y.toFixed(0)}`;
+    if(tool==="line"||tool==="rect"||tool==="free"){
+      mode="draw";
+      if(tool==="line") previewShape={type:"line",x1:startX,y1:startY,x2:x,y2:y,color:colorPicker.value,width:lineWidthInput.value};
+      if(tool==="rect") previewShape={type:"rect",x:startX,y:startY,w:x-startX,h:y-startY,color:colorPicker.value,width:lineWidthInput.value};
+      if(tool==="free"){ currentPath.push({x,y,w:(e.pressure||0.5)*lineWidthInput.value}); previewShape={type:"free",points:[...currentPath],color:colorPicker.value,width:lineWidthInput.value}; }
+      redraw();
+    } else {
+      offsetX+=dx; offsetY+=dy; redraw();
+    }
+  }
+});
+canvas.addEventListener('pointerup', e=>{
+  delete pointers[e.pointerId];
+  if(mode==="draw" && previewShape){ shapes.push(previewShape); previewShape=null; currentPath=[]; }
+  if(Object.keys(pointers).length<2) mode=null;
+  redraw();
+});
+canvas.addEventListener('pointercancel', e=>{ delete pointers[e.pointerId]; if(Object.keys(pointers).length<2) mode=null; });
+
+// Share
+function shareWhatsApp(){ window.open("https://wa.me/?text="+encodeURIComponent("Trading Chart Analyse Tool:\n"+window.location.href),"_blank"); }
+function shareEmail(){ window.location.href="mailto:?subject="+encodeURIComponent("Trading Chart Analyse Tool")+"&body="+encodeURIComponent("Hier ist ein Trading-Analyse-Tool:\n\n"+window.location.href); }
+
+// Nullitics
+new Image().src='https://nullitics.com/n.gif?u='+encodeURI(location.href)+'&r='+encodeURI(document.referrer)+'&d='+screen.width;
+</script>
+</body>
+</html>
