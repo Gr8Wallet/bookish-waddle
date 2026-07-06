@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pi Cycle Lab — GREAT WALLY</title>
+<style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html, body { width:100%; height:100%; overflow:hidden; background:#000;
+        font-family:'Segoe UI', system-ui, -apple-system, sans-serif; color:#fff;
+        -webkit-user-select:none; user-select:none; }
+    canvas { display:block; position:fixed; inset:0; cursor:crosshair; }
+
+    /* ---------- Header ---------- */
+    #header { position:fixed; top:18px; left:24px; z-index:60; pointer-events:none;
+        transition:opacity .8s ease; }
+    #header h1 { font-size:26px; font-weight:900; letter-spacing:3px; line-height:1;
+        text-shadow:0 0 18px rgba(247,147,26,.35); }
+    #header h1 .pi { color:#F7931A; }
+    #header p { margin-top:5px; font-size:12px; letter-spacing:.6px; color:rgba(255,255,255,.55); }
+    #header p b { color:#4ade80; font-weight:600; }
+
+    /* ---------- Legend ---------- */
+    #legend { position:fixed; top:22px; right:70px; z-index:60; display:flex; gap:16px;
+        font-size:11px; letter-spacing:.4px; color:rgba(255,255,255,.75);
+        transition:opacity .8s ease; pointer-events:none; }
+    #legend .li { display:flex; align-items:center; gap:6px; }
+    #legend .sw { width:18px; height:3px; border-radius:2px; }
+
+    /* ---------- Panel ---------- */
+    .panel { position:fixed; right:18px; bottom:52px; width:290px; z-index:100;
+        background:rgba(10,10,12,.88); border:1px solid rgba(247,147,26,.35); border-radius:14px;
+        backdrop-filter:blur(10px); box-shadow:0 8px 40px rgba(0,0,0,.7);
+        transition:opacity .8s ease; overflow:hidden; }
+    .panel-head { display:flex; align-items:center; justify-content:space-between;
+        padding:10px 14px; cursor:grab; background:rgba(247,147,26,.10);
+        border-bottom:1px solid rgba(247,147,26,.25); }
+    .panel-head:active { cursor:grabbing; }
+    .panel-head span { font-size:12px; font-weight:800; letter-spacing:1.6px; color:#F7931A; }
+    .panel-head button { background:none; border:none; color:rgba(255,255,255,.6); font-size:16px;
+        cursor:pointer; line-height:1; padding:2px 4px; }
+    .panel-body { padding:12px 14px 14px; }
+    .panel.collapsed .panel-body { display:none; }
+
+    .stats { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; }
+    .stat { background:rgba(255,255,255,.05); border-radius:8px; padding:8px 10px; }
+    .stat .k { font-size:9px; letter-spacing:1px; color:rgba(255,255,255,.45); text-transform:uppercase; }
+    .stat .v { font-size:15px; font-weight:700; margin-top:2px; }
+    #statusBadge { grid-column:1 / -1; text-align:center; border-radius:8px; padding:8px;
+        font-size:12px; font-weight:800; letter-spacing:1.2px; }
+    #statusBadge.calm { background:rgba(34,197,94,.16); color:#4ade80; border:1px solid rgba(34,197,94,.4); }
+    #statusBadge.mid { background:rgba(247,147,26,.14); color:#F7931A; border:1px solid rgba(247,147,26,.35); }
+    #statusBadge.hot { background:rgba(239,68,68,.16); color:#f87171; border:1px solid rgba(239,68,68,.4); }
+    #statusSub { grid-column:1 / -1; text-align:center; font-size:10px; color:rgba(255,255,255,.5);
+        margin-top:-4px; }
+
+    .ctl { margin-top:10px; }
+    .ctl label { display:flex; justify-content:space-between; font-size:11px;
+        color:rgba(255,255,255,.7); margin-bottom:4px; letter-spacing:.4px; }
+    .ctl label b { color:#4ade80; font-variant-numeric:tabular-nums; }
+    input[type=range] { width:100%; appearance:none; height:4px; border-radius:2px;
+        background:linear-gradient(90deg,#22c55e,#F7931A,#ef4444); outline:none; cursor:pointer; }
+    input[type=range]::-webkit-slider-thumb { appearance:none; width:15px; height:15px; border-radius:50%;
+        background:#fff; border:3px solid #22c55e; box-shadow:0 0 8px rgba(34,197,94,.8); cursor:pointer; }
+
+    .toggles { display:grid; grid-template-columns:1fr 1fr; gap:5px 10px; margin-top:12px; }
+    .tg { display:flex; align-items:center; gap:7px; font-size:11px; color:rgba(255,255,255,.75);
+        cursor:pointer; padding:3px 0; }
+    .tg input { accent-color:#F7931A; cursor:pointer; }
+
+    /* ---------- Tooltip ---------- */
+    #tooltip { position:fixed; z-index:90; pointer-events:none; display:none;
+        background:rgba(8,8,10,.94); border:1px solid rgba(255,255,255,.18); border-radius:10px;
+        padding:10px 13px; font-size:11.5px; line-height:1.75; box-shadow:0 6px 30px rgba(0,0,0,.8);
+        white-space:nowrap; }
+    #tooltip .tt-date { font-weight:800; letter-spacing:.6px; margin-bottom:3px; font-size:12px; }
+    #tooltip .row { display:flex; justify-content:space-between; gap:22px; }
+    #tooltip .row span:first-child { color:rgba(255,255,255,.55); }
+    #tooltip .val-p { color:#fff; font-weight:700; }
+    #tooltip .val-111 { color:#F7931A; font-weight:600; }
+    #tooltip .val-350 { color:#f87171; font-weight:600; }
+
+    /* ---------- Share ---------- */
+    .share-wrap { position:fixed; right:0; top:50%; transform:translateY(-50%); z-index:110;
+        display:flex; align-items:center; transition:opacity .8s ease; }
+    .share-tab { width:12px; height:64px; background:#F7931A; border-radius:6px 0 0 6px; cursor:pointer;
+        transition:width .2s ease; }
+    .share-wrap:hover .share-tab { width:16px; }
+    .share-opts { display:none; flex-direction:column; gap:6px; background:rgba(10,10,12,.92);
+        border:1px solid rgba(247,147,26,.3); border-right:none; border-radius:10px 0 0 10px; padding:10px; }
+    .share-wrap:hover .share-opts { display:flex; }
+    .share-opts button, .share-opts a { display:block; width:120px; padding:7px 10px; border:none;
+        border-radius:7px; background:rgba(255,255,255,.07); color:#fff; font-size:11px; text-align:left;
+        cursor:pointer; text-decoration:none; letter-spacing:.4px; transition:background .15s; }
+    .share-opts button:hover, .share-opts a:hover { background:rgba(247,147,26,.25); }
+
+    /* ---------- Watermark ---------- */
+    #watermark { position:fixed; right:18px; bottom:12px; z-index:80; display:flex; flex-direction:column;
+        align-items:center; line-height:.85; opacity:.55; text-decoration:none;
+        transition:opacity .3s, transform .3s; }
+    #watermark:hover { opacity:1; transform:scale(1.06); }
+    #watermark .wm-great { color:#FFF; font-weight:900; font-size:16px; letter-spacing:1px;
+        text-shadow:0 0 8px rgba(0,0,0,.8); }
+    #watermark .wm-wally { color:#F7931A; font-weight:900; font-size:20px; letter-spacing:1px;
+        text-shadow:0 0 10px rgba(247,147,26,.6); }
+    #watermark .wm-y { color:#FFF; text-shadow:0 0 8px rgba(255,255,255,.5); }
+
+    /* ---------- Cinema mode ---------- */
+    body.cinema #header, body.cinema #legend, body.cinema .panel,
+    body.cinema .share-wrap, body.cinema #tooltip { opacity:0 !important; pointer-events:none !important; }
+    body.cinema #watermark { opacity:0; }
+    body.cinema canvas { cursor:none; }
+
+    /* ---------- Toast ---------- */
+    #toast { position:fixed; left:50%; bottom:80px; transform:translateX(-50%) translateY(10px); z-index:200;
+        background:rgba(34,197,94,.92); color:#000; font-weight:700; font-size:12px; padding:9px 20px;
+        border-radius:20px; opacity:0; transition:all .3s ease; pointer-events:none; }
+    #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+    @media (max-width:768px) {
+        #header h1 { font-size:19px; }
+        #header p { font-size:10px; max-width:62vw; }
+        #legend { display:none; }
+        .panel { width:calc(100vw - 20px); right:10px; left:10px; bottom:10px; }
+        #watermark { right:10px; bottom:auto; top:14px; }
+        #watermark .wm-great { font-size:11px; }
+        #watermark .wm-wally { font-size:14px; }
+    }
+</style>
+</head>
+<body>
+
+<canvas id="chart"></canvas>
+
+<div id="header">
+    <h1><span class="pi">PI CYCLE</span> LAB</h1>
+    <p>Der Indikator, den alle fürs Top nutzen — gelesen als <b>Boden-Signal</b></p>
+</div>
+
+<div id="legend">
+    <div class="li"><div class="sw" style="background:#fff;box-shadow:0 0 6px rgba(255,255,255,.8)"></div>BTC (Monatsschluss)</div>
+    <div class="li"><div class="sw" style="background:#F7931A"></div>MA111</div>
+    <div class="li"><div class="sw" style="background:#f87171"></div>2×MA350</div>
+    <div class="li"><div class="sw" style="background:linear-gradient(90deg,#22c55e,#ef4444)"></div>Spannungsband</div>
+</div>
+
+<div class="panel" id="panel">
+    <div class="panel-head" id="panelHead">
+        <span>⚙ PI CYCLE LAB</span>
+        <button id="panelToggle" title="Ein-/Ausklappen">−</button>
+    </div>
+    <div class="panel-body">
+        <div class="stats">
+            <div class="stat"><div class="k">Bitcoin</div><div class="v" id="stPrice">—</div></div>
+            <div class="stat"><div class="k">Top-Ratio 111/350</div><div class="v" id="stRatio" style="color:#4ade80">—</div></div>
+            <div id="statusBadge" class="calm">—</div>
+            <div id="statusSub"></div>
+        </div>
+        <div class="ctl">
+            <label>Boden-Schwelle (Top-Ratio) <b id="thrVal">0.400</b></label>
+            <input type="range" id="thrSlider" min="0.25" max="0.60" step="0.005" value="0.40">
+        </div>
+        <div class="toggles">
+            <label class="tg"><input type="checkbox" id="tgMA111" checked> MA111</label>
+            <label class="tg"><input type="checkbox" id="tgMA350" checked> 2×MA350</label>
+            <label class="tg"><input type="checkbox" id="tgFill" checked> Spannungsband</label>
+            <label class="tg"><input type="checkbox" id="tgZone" checked> Boden-Zone</label>
+            <label class="tg"><input type="checkbox" id="tgBottoms" checked> Boden-Signale</label>
+            <label class="tg"><input type="checkbox" id="tgTops" checked> Top-Signale</label>
+            <label class="tg"><input type="checkbox" id="tgHeat" checked> Top-Ratio-Heatstrip</label>
+            <label class="tg"><input type="checkbox" id="tgLog" checked> Log-Skala</label>
+        </div>
+    </div>
+</div>
+
+<div id="tooltip"></div>
+
+<div class="share-wrap" id="shareWrap">
+    <div class="share-opts">
+        <button id="shLink">🔗 Link kopieren</button>
+        <a id="shWa" target="_blank" rel="noopener">💬 WhatsApp</a>
+        <a id="shX" target="_blank" rel="noopener">𝕏 Posten</a>
+        <a href="https://www.youtube.com/@WalletGreat" target="_blank" rel="noopener">▶ YouTube</a>
+    </div>
+    <div class="share-tab"></div>
+</div>
+
+<a id="watermark" href="https://www.youtube.com/@WalletGreat" target="_blank" rel="noopener" title="GREAT WALLY · YouTube">
+    <span class="wm-great">GREAT</span>
+    <span class="wm-wally">WALL<span class="wm-y">Y</span></span>
+</a>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* ============================================================
+   PI CYCLE LAB — GREAT WALLY
+   BTC Monatsdaten (Bitstamp) · MA111 vs. 2×MA350
+   Mind-Shift: Der Pi Cycle als BODEN-Indikator.
+   ============================================================ */
+
+// [date, close, 2xMA350, MA111, ratio]
+const DATA = [["2012-08-01",10.16,11.74,7.72,0.657581],["2012-09-01",12.22,12.44,9.42,0.757476],["2012-10-01",11.0,13.85,10.85,0.783945],["2012-11-01",12.43,15.29,11.41,0.746044],["2012-12-01",13.24,16.68,12.05,0.722349],["2013-01-01",20.46,18.38,13.0,0.70729],["2013-02-01",33.53,21.76,16.77,0.770398],["2013-03-01",96.15,31.11,29.5,0.948275],["2013-04-01",139.88,52.14,60.43,1.158981],["2013-05-01",127.91,72.02,88.32,1.226193],["2013-06-01",89.53,88.87,107.79,1.212902],["2013-07-01",98.28,102.32,105.28,1.028979],["2013-08-01",128.0,118.78,102.0,0.858709],["2013-09-01",126.25,138.09,103.59,0.75019],["2013-10-01",203.54,163.45,121.14,0.741152],["2013-11-01",1119.8,254.94,243.9,0.956676],["2013-12-01",732.0,392.51,432.75,1.102517],["2014-01-01",803.0,534.05,626.77,1.173632],["2014-02-01",550.1,633.7,742.4,1.17154],["2014-03-01",454.83,721.08,697.0,0.966607],["2014-04-01",448.85,780.15,618.92,0.793326],["2014-05-01",627.8,845.87,531.92,0.628843],["2014-06-01",641.11,935.4,529.97,0.566576],["2014-07-01",582.04,1028.36,555.54,0.54022],["2014-08-01",479.04,1102.63,576.28,0.522641],["2014-09-01",391.09,1157.14,543.25,0.469474],["2014-10-01",337.99,1179.0,475.55,0.403348],["2014-11-01",377.01,1095.73,412.14,0.376133],["2014-12-01",321.0,1023.32,368.7,0.360296],["2015-01-01",216.9,938.33,329.58,0.351241],["2015-02-01",253.47,877.58,297.57,0.339078],["2015-03-01",244.24,833.18,267.87,0.321506],["2015-04-01",236.2,793.98,243.87,0.307154],["2015-05-01",228.91,735.63,245.37,0.333551],["2015-06-01",262.5,672.17,241.12,0.358725],["2015-07-01",284.33,615.46,247.07,0.401442],["2015-08-01",229.86,572.36,252.68,0.441464],["2015-09-01",236.2,544.75,253.13,0.464671],["2015-10-01",310.18,527.53,256.05,0.485372],["2015-11-01",376.71,523.47,274.25,0.523899],["2015-12-01",430.89,545.07,326.55,0.599096],["2016-01-01",368.49,576.98,375.12,0.650145],["2016-02-01",435.23,600.12,398.92,0.664738],["2016-03-01",414.66,629.63,415.25,0.659521],["2016-04-01",448.37,664.13,413.34,0.622379],["2016-05-01",531.84,704.69,433.28,0.614854],["2016-06-01",667.95,770.0,494.57,0.642298],["2016-07-01",623.83,837.85,562.77,0.671691],["2016-08-01",570.75,899.04,599.25,0.666547],["2016-09-01",608.23,961.51,626.05,0.651106],["2016-10-01",697.01,1017.85,616.03,0.605224],["2016-11-01",742.06,1077.28,641.36,0.595353],["2016-12-01",966.3,1146.1,707.93,0.617683],["2017-01-01",963.99,1239.21,792.32,0.639374],["2017-02-01",1191.21,1342.26,890.99,0.663801],["2017-03-01",1070.31,1467.86,999.13,0.680671],["2017-04-01",1350.21,1598.47,1086.38,0.679638],["2017-05-01",2298.01,1836.31,1352.38,0.736464],["2017-06-01",2465.49,2170.09,1753.27,0.807927],["2017-07-01",2855.81,2504.64,2145.15,0.856471],["2017-08-01",4734.26,3084.95,2839.55,0.920451],["2017-09-01",4326.09,3680.7,3325.09,0.903384],["2017-10-01",6434.21,4506.4,4108.74,0.911755],["2017-11-01",9947.67,5708.86,5462.65,0.956873],["2017-12-01",13880.0,8206.35,8441.86,1.028698],["2018-01-01",10149.0,10327.07,10897.13,1.0552],["2018-02-01",10314.9,11641.33,11687.46,1.003962],["2018-03-01",6928.62,13038.49,11492.37,0.881419],["2018-04-01",9242.17,14166.72,9415.34,0.66461],["2018-05-01",7492.28,15238.47,8730.92,0.572953],["2018-06-01",6385.71,15970.62,7836.83,0.490703],["2018-07-01",7725.43,16703.53,7657.17,0.458416],["2018-08-01",7017.35,17128.1,7038.68,0.410944],["2018-09-01",6597.81,17511.39,6724.52,0.384008],["2018-10-01",6303.27,17519.42,6720.38,0.383596],["2018-11-01",3971.06,16469.29,6201.38,0.376542],["2018-12-01",3693.3,14424.1,5374.87,0.372631],["2019-01-01",3413.11,13315.54,4579.38,0.343912],["2019-02-01",3791.36,12280.73,3893.96,0.317079],["2019-03-01",4096.08,11614.67,3731.11,0.321241],["2019-04-01",5269.0,10957.71,4114.66,0.375504],["2019-05-01",8547.2,10919.85,5163.87,0.472888],["2019-06-01",10760.1,11432.32,6680.87,0.584385],["2019-07-01",10085.34,12038.12,8444.36,0.701469],["2019-08-01",9594.15,12744.49,9871.16,0.774543],["2019-09-01",8298.45,13309.81,10335.67,0.776545],["2019-10-01",9150.07,13673.43,9684.74,0.708289],["2019-11-01",7550.67,14418.55,9085.77,0.630144],["2019-12-01",7168.36,15033.35,8238.35,0.548005],["2020-01-01",9327.85,15891.26,8060.22,0.507211],["2020-02-01",8527.74,16851.68,8305.73,0.492872],["2020-03-01",6421.14,17265.64,8068.47,0.467314],["2020-04-01",8627.32,17488.87,8040.15,0.459729],["2020-05-01",9446.19,17682.38,8107.7,0.458518],["2020-06-01",9132.96,17416.42,8173.55,0.469301],["2020-07-01",11356.74,17244.37,9088.29,0.527029],["2020-08-01",11655.0,17493.54,10096.89,0.577178],["2020-09-01",10778.22,17831.08,10408.94,0.583753],["2020-10-01",13816.08,18387.41,11134.24,0.605536],["2020-11-01",19700.19,19971.39,12811.49,0.641492],["2020-12-01",28992.79,22523.54,15801.14,0.701539],["2021-01-01",33141.38,27023.69,22497.21,0.8325],["2021-02-01",45240.96,33081.14,30846.05,0.932436],["2021-03-01",58782.58,41642.44,41150.18,0.988179],["2021-04-01",57775.27,50000.66,49279.15,0.98557],["2021-05-01",37341.41,56550.27,52230.7,0.923615],["2021-06-01",35037.23,61105.52,48310.44,0.790607],["2021-07-01",41490.13,65303.12,41930.57,0.642091],["2021-08-01",47156.09,71428.22,38960.72,0.545453],["2021-09-01",43834.43,77440.31,40885.81,0.527966],["2021-10-01",61359.44,85232.91,47313.85,0.555113],["2021-11-01",56974.12,92463.7,53561.13,0.579267],["2021-12-01",46214.37,95848.37,53983.73,0.56322],["2022-01-01",38491.92,96413.05,52154.44,0.540948],["2022-02-01",43178.98,94595.26,46821.89,0.494971],["2022-03-01",45517.27,91786.38,42642.97,0.464589],["2022-04-01",37639.8,89496.55,41084.0,0.459057],["2022-05-01",31762.76,88401.39,38703.99,0.437821],["2022-06-01",19924.89,86726.14,34339.32,0.395951],["2022-07-01",23322.53,83586.73,28277.29,0.338299],["2022-08-01",20059.0,79078.97,23946.82,0.302822],["2022-09-01",19425.0,74085.9,21220.93,0.286437],["2022-10-01",20498.0,66456.22,20900.49,0.3145],["2022-11-01",17170.0,60208.59,19529.4,0.324362],["2022-12-01",16528.0,55042.46,18323.08,0.33289],["2023-01-01",23127.0,51506.54,18516.36,0.359495],["2023-02-01",23136.0,48870.88,19401.04,0.396986],["2023-03-01",28476.0,45626.95,21742.15,0.47652],["2023-04-01",29235.0,44272.12,24976.68,0.564163],["2023-05-01",27219.0,44002.95,26499.58,0.602223],["2023-06-01",30469.0,45261.39,27819.34,0.614637],["2023-07-01",29231.0,46497.51,28556.27,0.614146],["2023-08-01",25932.0,47749.86,28308.96,0.59286],["2023-09-01",26966.0,48938.43,28152.93,0.575272],["2023-10-01",34661.0,50794.57,28298.87,0.557124],["2023-11-01",37719.0,54182.8,30185.1,0.557097],["2023-12-01",42258.0,58660.6,34635.5,0.590439],["2024-01-01",42558.0,62257.51,39092.41,0.627915],["2024-02-01",61161.0,66674.66,43588.99,0.653757],["2024-03-01",71285.0,73632.7,51622.98,0.701088],["2024-04-01",60632.0,80086.33,57693.98,0.720397],["2024-05-01",67477.0,86919.32,63988.84,0.736187],["2024-06-01",62676.0,93074.1,66168.39,0.710922],["2024-07-01",64612.0,98985.86,64561.91,0.652234],["2024-08-01",58967.0,104966.26,63632.11,0.606215],["2024-09-01",63302.0,110665.19,61530.14,0.556003],["2024-10-01",70231.0,116235.95,62588.66,0.538462],["2024-11-01",96441.0,124231.87,68877.62,0.554428],["2024-12-01",93381.0,133917.89,79852.94,0.596283],["2025-01-01",102412.0,143809.68,90416.18,0.628721],["2025-02-01",84321.0,149245.27,96948.59,0.649592],["2025-03-01",82538.0,152317.49,94334.62,0.619329],["2025-04-01",94181.0,156334.11,91229.49,0.583555],["2025-05-01",104646.0,162580.03,92183.75,0.567005],["2025-06-01",107179.0,170247.15,96130.7,0.564654],["2025-07-01",115750.0,179538.43,105058.14,0.585157],["2025-08-01",108269.0,189429.88,111124.67,0.586627],["2025-09-01",114065.0,198055.75,112959.17,0.57034],["2025-10-01",109554.0,205275.01,114764.04,0.559075],["2025-11-01",90382.0,205146.03,109064.54,0.531643],["2025-12-01",87496.0,203724.58,102228.41,0.501797],["2026-01-01",78635.0,201949.43,95019.09,0.470509],["2026-02-01",66985.0,198749.33,84968.37,0.427515],["2026-03-01",68215.0,196260.14,78691.02,0.400953],["2026-04-01",76310.0,192553.81,74566.1,0.387248],["2026-05-01",73567.99,187492.16,72646.35,0.387463],["2026-06-01",58526.17,179609.09,71329.59,0.397138],["2026-07-01",62874.17,177693.69,70781.68,0.398335]];
+
+const N = DATA.length;
+const MON = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+const STORY1 = 'Jeder nutzt den Pi Cycle fürs Top.';
+const STORY2 = 'Aber dieselben zwei Linien zeigen dir den Boden.';
+
+// ------------------------------------------------------------
+// State
+// ------------------------------------------------------------
+const S = {
+    thr: 0.40,
+    log: true,
+    show: { ma111:true, ma350:true, fill:true, zone:true, bottoms:true, tops:true, heat:true },
+    hover: -1,
+    anim: null   // set during cinematic mode
+};
+
+// ------------------------------------------------------------
+// Signal detection
+// ------------------------------------------------------------
+function findBottoms(thr) {
+    const raw = [];
+    for (let i = 1; i < N - 1; i++) {
+        const r = DATA[i][4];
+        if (r < thr && r <= DATA[i-1][4] && r < DATA[i+1][4]) raw.push(i);
+    }
+    // dedupe: keep lowest ratio within 8 months
+    const out = [];
+    for (const i of raw) {
+        const prev = out[out.length - 1];
+        if (prev !== undefined && i - prev < 8) {
+            if (DATA[i][4] < DATA[prev][4]) out[out.length - 1] = i;
+        } else out.push(i);
+    }
+    return out;
+}
+function findTops() {
+    // Episoden mit Ratio >= 0.95 gruppieren (Lücke > 2 Monate = neue Episode), Maximum je Episode
+    const groups = []; let cur = [];
+    for (let i = 0; i < N; i++) {
+        if (DATA[i][4] >= 0.95) cur.push(i);
+        else if (cur.length && i - cur[cur.length-1] > 2) { groups.push(cur); cur = []; }
+    }
+    if (cur.length) groups.push(cur);
+    return groups.map(g => g.reduce((a,b) => DATA[a][4] >= DATA[b][4] ? a : b));
+}
+// Signal-Monat (Ratio-Extrem) → tatsächliches Preis-Extrem im Fenster ±4 Monate.
+// Das Ratio liefert das Signal, der Marker sitzt exakt auf dem Hoch/Tief der weißen Preislinie.
+function snapToPrice(i, wantMax) {
+    let best = i;
+    for (let k = Math.max(0, i - 4); k <= Math.min(N - 1, i + 4); k++) {
+        if (wantMax ? DATA[k][1] > DATA[best][1] : DATA[k][1] < DATA[best][1]) best = k;
+    }
+    return best;
+}
+
+let BOTTOMS = findBottoms(S.thr);
+const TOPS = findTops();
+const LAST = N - 1;
+
+// ------------------------------------------------------------
+// Canvas setup
+// ------------------------------------------------------------
+const cv = document.getElementById('chart');
+const ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+let PAD = { l: 78, r: 40, t: 84, b: 64 };
+
+function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = W * DPR; cv.height = H * DPR;
+    cv.style.width = W + 'px'; cv.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    const mob = W < 600;
+    PAD = mob ? { l: 70, r: 16, t: 96, b: 72 } : { l: 108, r: 46, t: 92, b: 84 };
+}
+window.addEventListener('resize', () => { resize(); });
+resize();
+
+// ------------------------------------------------------------
+// Scales
+// ------------------------------------------------------------
+let yMin, yMax;
+function computeDomain() {
+    let lo = Infinity, hi = -Infinity;
+    for (const d of DATA) {
+        lo = Math.min(lo, d[1], d[3]);
+        hi = Math.max(hi, d[1], d[2], d[3]);
+    }
+    if (S.log) { yMin = lo * 0.72; yMax = hi * 1.30; }
+    else { yMin = 0; yMax = hi * 1.06; }
+}
+computeDomain();
+
+const xAt = i => PAD.l + (i / (N - 1)) * (W - PAD.l - PAD.r);
+function yAt(v) {
+    const h = H - PAD.t - PAD.b;
+    if (S.log) {
+        const t = (Math.log10(v) - Math.log10(yMin)) / (Math.log10(yMax) - Math.log10(yMin));
+        return PAD.t + h * (1 - t);
+    }
+    return PAD.t + h * (1 - (v - yMin) / (yMax - yMin));
+}
+
+// ------------------------------------------------------------
+// Formatting helpers
+// ------------------------------------------------------------
+function fmt$(v) {
+    if (v >= 1000) return '$' + Math.round(v).toLocaleString('de-DE');
+    return '$' + v.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fmtAxis(v) {
+    if (v >= 1000000) return '$' + (v/1000000) + 'M';
+    if (v >= 1000) return '$' + (v/1000) + 'K';
+    return '$' + v;
+}
+function dLabel(i) {
+    const d = new Date(DATA[i][0] + 'T00:00:00');
+    return MON[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+// Ratio → Farbe: tiefes Ratio = Entspannung (grün), hohes Ratio = Spannung (rot)
+function ratioHue(r) {
+    const t = Math.max(0, Math.min(1, (r - 0.30) / (1.05 - 0.30)));
+    return 145 * (1 - t) + 8 * t;
+}
+function ratioColor(r, a) { return `hsla(${ratioHue(r)}, 82%, 52%, ${a})`; }
+
+const easeOut = t => 1 - Math.pow(1 - t, 3);
+const easeIO = t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2;
+const clamp01 = t => Math.max(0, Math.min(1, t));
+
+// ------------------------------------------------------------
+// Draw layers  (jede Ebene nimmt Alpha/Progress für die Animation)
+// ------------------------------------------------------------
+function drawGrid(a) {
+    if (a <= 0) return;
+    ctx.save(); ctx.globalAlpha = a;
+    ctx.font = '600 ' + (W < 600 ? '15px' : '21px') + " 'Segoe UI', sans-serif";
+    // Y-Achse
+    const ticks = S.log
+        ? [10, 100, 1000, 10000, 100000].filter(v => v >= yMin && v <= yMax)
+        : (() => { const st = Math.pow(10, Math.floor(Math.log10(yMax/5))); const arr=[];
+                   for (let v = st; v <= yMax; v += st) arr.push(v); return arr.slice(0, 8); })();
+    for (const v of ticks) {
+        const y = yAt(v);
+        ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(PAD.l, y); ctx.lineTo(W - PAD.r, y); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+        ctx.fillText(fmtAxis(v), PAD.l - 10, y);
+        if (S.log) { // Minor-Gridlines
+            for (const m of [2, 5]) {
+                const mv = v * m; if (mv >= yMax) continue;
+                const my = yAt(mv);
+                ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+                ctx.beginPath(); ctx.moveTo(PAD.l, my); ctx.lineTo(W - PAD.r, my); ctx.stroke();
+            }
+        }
+    }
+    // X-Achse (Jahre)
+    const step = W < 600 ? 3 : 2;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (let i = 0; i < N; i++) {
+        const d = new Date(DATA[i][0] + 'T00:00:00');
+        if (d.getMonth() === 0 && d.getFullYear() % step === 1) {
+            const x = xAt(i);
+            ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+            ctx.beginPath(); ctx.moveTo(x, PAD.t); ctx.lineTo(x, H - PAD.b); ctx.stroke();
+            ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            ctx.fillText(d.getFullYear(), x, H - PAD.b + 12);
+        }
+    }
+    ctx.restore();
+}
+
+function drawZones(a, thr) {
+    if (a <= 0) return;
+    ctx.save(); ctx.globalAlpha = a;
+    let i = 0;
+    while (i < N) {
+        if (DATA[i][4] < thr) {
+            let j = i; while (j < N - 1 && DATA[j+1][4] < thr) j++;
+            const x0 = xAt(Math.max(0, i - 0.5)), x1 = xAt(Math.min(N - 1, j + 0.5));
+            const g = ctx.createLinearGradient(0, H - PAD.b, 0, PAD.t + (H - PAD.t - PAD.b) * 0.30);
+            g.addColorStop(0, 'rgba(34,197,94,0.16)');
+            g.addColorStop(1, 'rgba(34,197,94,0)');
+            ctx.fillStyle = g;
+            ctx.fillRect(x0, PAD.t, x1 - x0, H - PAD.t - PAD.b);
+            i = j + 1;
+        } else i++;
+    }
+    ctx.restore();
+}
+
+// Spannungsband zwischen MA111 und 2×MA350 — Farbe & Deckkraft folgen dem Ratio
+function drawFill(a, greenBoost) {
+    if (a <= 0) return;
+    ctx.save(); ctx.globalAlpha = a;
+    for (let i = 0; i < N - 1; i++) {
+        const r = (DATA[i][4] + DATA[i+1][4]) / 2;
+        const t = Math.max(0, Math.min(1, (r - 0.30) / (1.05 - 0.30)));
+        // Extreme sichtbarer machen; greenBoost hebt die Entspannungszonen im Mind-Shift an
+        let alpha = 0.10 + 0.22 * Math.abs(t - 0.5) * 2;
+        if (greenBoost > 0 && t < 0.35) alpha += greenBoost * 0.25 * (1 - t / 0.35);
+        const x0 = xAt(i) - 0.5, x1 = xAt(i + 1) + 0.5;
+        ctx.fillStyle = ratioColor(r, alpha);
+        ctx.beginPath();
+        ctx.moveTo(x0, yAt(DATA[i][3]));   ctx.lineTo(x1, yAt(DATA[i+1][3]));
+        ctx.lineTo(x1, yAt(DATA[i+1][2])); ctx.lineTo(x0, yAt(DATA[i][2]));
+        ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+}
+
+function drawLine(col, glow, width, colIdx, prog, alpha) {
+    if (alpha <= 0 || prog <= 0) return;
+    const nPts = Math.max(2, Math.floor(prog * N));
+    const fracLast = prog * N - Math.floor(prog * N);
+    ctx.save(); ctx.globalAlpha = alpha;
+    ctx.strokeStyle = col; ctx.lineWidth = width;
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.shadowColor = glow; ctx.shadowBlur = 10;
+    ctx.beginPath();
+    for (let i = 0; i < Math.min(nPts, N); i++) {
+        const x = xAt(i), y = yAt(DATA[i][colIdx]);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    // Interpoliertes Teilstück für flüssiges Zeichnen
+    if (nPts < N && fracLast > 0) {
+        const i = nPts - 1;
+        const x = xAt(i) + (xAt(i+1) - xAt(i)) * fracLast;
+        const y = yAt(DATA[i][colIdx]) + (yAt(DATA[i+1][colIdx]) - yAt(DATA[i][colIdx])) * fracLast;
+        ctx.lineTo(x, y);
+        // Leuchtender Zeichenkopf
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.fillStyle = '#fff'; ctx.shadowColor = col; ctx.shadowBlur = 18;
+        ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.restore(); return;
+    }
+    ctx.stroke(); ctx.restore();
+}
+
+function drawHeat(a) {
+    if (a <= 0) return;
+    ctx.save(); ctx.globalAlpha = a;
+    const y0 = H - PAD.b + 46, hh = 7;
+    for (let i = 0; i < N; i++) {
+        const x0 = i === 0 ? xAt(0) : (xAt(i-1) + xAt(i)) / 2;
+        const x1 = i === N-1 ? xAt(N-1) : (xAt(i) + xAt(i+1)) / 2;
+        ctx.fillStyle = ratioColor(DATA[i][4], 0.85);
+        ctx.fillRect(x0, y0, x1 - x0 + 0.5, hh);
+    }
+    ctx.font = "600 10.5px 'Segoe UI', sans-serif";
+    ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.fillText('TOP-RATIO', PAD.l - 8, y0 + hh/2 + 0.5);
+    ctx.restore();
+}
+
+function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
+function labelBox(x, y, lines, accent, a) {
+    ctx.save(); ctx.globalAlpha = a;
+    ctx.font = "700 " + (W < 600 ? 9.5 : 11) + "px 'Segoe UI', sans-serif";
+    let wMax = 0;
+    for (const L of lines) wMax = Math.max(wMax, ctx.measureText(L).width);
+    const lh = W < 600 ? 13 : 15, pad = 7;
+    const bw = wMax + pad * 2, bh = lines.length * lh + pad * 1.4;
+    let bx = x - bw / 2;
+    bx = Math.max(PAD.l - 30, Math.min(W - PAD.r - bw + 20, bx));
+    ctx.fillStyle = 'rgba(6,6,8,0.88)';
+    ctx.strokeStyle = accent; ctx.lineWidth = 1;
+    roundRect(bx, y, bw, bh, 6); ctx.fill(); ctx.stroke();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    lines.forEach((L, k) => {
+        ctx.fillStyle = k === 0 ? accent : 'rgba(255,255,255,0.85)';
+        ctx.fillText(L, bx + bw / 2, y + pad * 0.7 + k * lh);
+    });
+    ctx.restore();
+}
+
+function drawTops(reveal, now) {
+    // reveal: Array gleicher Länge wie TOPS mit Alpha 0..1
+    TOPS.forEach((i, k) => {
+        const a = reveal[k]; if (a <= 0) return;
+        const pi = snapToPrice(i, true);          // exaktes Preis-Hoch der Episode
+        const x = xAt(pi), y = yAt(DATA[pi][1]);
+        const pop = 1 + 0.6 * (1 - a);            // Pop-in-Effekt
+        ctx.save(); ctx.globalAlpha = a;
+        ctx.shadowColor = '#ef4444'; ctx.shadowBlur = 16;
+        ctx.fillStyle = '#ef4444';
+        ctx.translate(x, y - 14 * pop); ctx.rotate(Math.PI / 4);
+        const s = 6 * pop;
+        ctx.fillRect(-s/2, -s/2, s, s);
+        ctx.restore();
+        const off = (k % 2 === 0) ? -70 : -50;
+        labelBox(x, y + off - 14, ['TOP · ' + dLabel(pi), fmt$(DATA[pi][1]) + ' · Top-Ratio ' + DATA[i][4].toFixed(2)], '#f87171', a);
+    });
+}
+
+function drawBottoms(bottoms, reveal, now) {
+    bottoms.forEach((i, k) => {
+        const a = reveal[k]; if (a <= 0) return;
+        const pi = snapToPrice(i, false);         // exaktes Preis-Tief der Episode
+        const isCurrent = (pi >= N - 6);
+        const x = xAt(pi), y = yAt(DATA[pi][1]);
+        ctx.save(); ctx.globalAlpha = a;
+        // Puls-Ring
+        const pulse = isCurrent ? (0.5 + 0.5 * Math.sin(now / 320)) : 0;
+        ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 2;
+        ctx.shadowColor = '#22c55e'; ctx.shadowBlur = 14;
+        ctx.beginPath(); ctx.arc(x, y, 7 + pulse * 3, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = '#22c55e';
+        ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+        if (isCurrent && pulse > 0) {
+            ctx.globalAlpha = a * (1 - pulse) * 0.5;
+            ctx.beginPath(); ctx.arc(x, y, 10 + pulse * 16, 0, Math.PI * 2); ctx.stroke();
+        }
+        ctx.restore();
+        const lines = isCurrent
+            ? ['BODEN? · ' + dLabel(pi), fmt$(DATA[pi][1]) + ' · Top-Ratio ' + DATA[i][4].toFixed(3) + ' ↺']
+            : ['BODEN · ' + dLabel(pi), fmt$(DATA[pi][1]) + ' · Top-Ratio ' + DATA[i][4].toFixed(3)];
+        labelBox(x, y + 18, lines, '#4ade80', a);
+    });
+}
+
+function drawToday(a, now) {
+    if (a <= 0) return;
+    const x = xAt(LAST), y = yAt(DATA[LAST][1]);
+    ctx.save(); ctx.globalAlpha = a;
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath(); ctx.moveTo(x, PAD.t - 6); ctx.lineTo(x, H - PAD.b); ctx.stroke();
+    ctx.setLineDash([]);
+    const pulse = 0.5 + 0.5 * Math.sin(now / 300);
+    ctx.fillStyle = '#fff'; ctx.shadowColor = '#fff'; ctx.shadowBlur = 12 + 8 * pulse;
+    ctx.beginPath(); ctx.arc(x, y, 4.5, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.font = "800 " + (W < 600 ? 10 : 11.5) + "px 'Segoe UI', sans-serif";
+    ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.fillText('HEUTE', x - 8, PAD.t + 8);
+    ctx.font = "600 " + (W < 600 ? 9 : 10.5) + "px 'Segoe UI', sans-serif";
+    ctx.fillStyle = '#4ade80';
+    ctx.fillText('Top-Ratio ' + DATA[LAST][4].toFixed(3) + ' ↑', x - 8, PAD.t + 22);
+    ctx.restore();
+}
+
+function drawCrosshair() {
+    const i = S.hover; if (i < 0) return;
+    const x = xAt(i);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1;
+    ctx.setLineDash([3, 4]);
+    ctx.beginPath(); ctx.moveTo(x, PAD.t); ctx.lineTo(x, H - PAD.b); ctx.stroke();
+    ctx.setLineDash([]);
+    for (const [ci, col] of [[1, '#fff'], [3, '#F7931A'], [2, '#f87171']]) {
+        ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 8;
+        ctx.beginPath(); ctx.arc(x, yAt(DATA[i][ci]), 3.5, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+}
+
+// ------------------------------------------------------------
+// Story-/Cinema-Texte (Canvas)
+// ------------------------------------------------------------
+function drawCenteredText(text, ySpot, size, weight, color, glowCol, a, spacing, scale) {
+    if (a <= 0) return;
+    const sc = scale || 1;
+    let fs = size * sc, sp = (spacing || 0) * sc;
+    ctx.save(); ctx.globalAlpha = a;
+    const setFont = () => {
+        ctx.font = weight + ' ' + fs + "px 'Segoe UI', 'Arial Black', sans-serif";
+        try { ctx.letterSpacing = sp + 'px'; } catch (e) {}
+    };
+    setFont();
+    // Auto-Fit: nie breiter als 92% des Fensters
+    const tw = ctx.measureText(text).width, maxW = W * 0.92;
+    if (tw > maxW) { const f = maxW / tw; fs *= f; sp *= f; setFont(); }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.shadowColor = glowCol; ctx.shadowBlur = 34;
+    ctx.fillStyle = color;
+    ctx.fillText(text, W / 2, ySpot);
+    // Doppelter Durchgang für Kino-Bloom
+    ctx.shadowBlur = 80; ctx.globalAlpha = a * 0.5;
+    ctx.fillText(text, W / 2, ySpot);
+    ctx.restore();
+    try { ctx.letterSpacing = '0px'; } catch (e) {}
+}
+
+// Kino-Vignette: dunkle Ränder, Fokus auf die Mitte
+function drawVignette(a) {
+    if (a <= 0) return;
+    ctx.save(); ctx.globalAlpha = a;
+    const g = ctx.createRadialGradient(W/2, H/2, Math.min(W,H) * 0.35, W/2, H/2, Math.max(W,H) * 0.75);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, 'rgba(0,0,0,0.62)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+}
+
+function drawCaption(text, a) {
+    if (a <= 0) return;
+    // Oben mittig, groß & versal wie ein Kino-Zwischentitel — Header/Legende sind im Cinema-Mode ausgeblendet
+    drawCenteredText(text.toUpperCase(), W < 600 ? 52 : 64, W < 600 ? 15 : 25, '800', 'rgba(255,255,255,0.95)', 'rgba(255,255,255,0.55)', a, 3);
+}
+
+// ------------------------------------------------------------
+// Master-Render — nimmt einen "Frame-State" (statisch oder animiert)
+// ------------------------------------------------------------
+function render(now, F) {
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+
+    drawGrid(F.grid);
+    if (S.show.zone)  drawZones(F.zone, S.thr);
+    if (S.show.fill)  drawFill(F.fill, F.greenBoost);
+    if (S.show.ma350) drawLine('#f87171', 'rgba(239,68,68,0.7)', 2.8, 2, F.p350, F.aMA);
+    if (S.show.ma111) drawLine('#F7931A', 'rgba(247,147,26,0.8)', 2.8, 3, F.p111, F.aMA);
+    drawLine('#ffffff', 'rgba(255,255,255,0.75)', 3.4, 1, F.pPrice, 1);
+    if (S.show.heat)  drawHeat(F.heat);
+    if (S.show.tops)  drawTops(F.topsA, now);
+    if (S.show.bottoms) drawBottoms(BOTTOMS, F.botA, now);
+    drawToday(F.today, now);
+    if (!F.cinema) drawCrosshair();
+
+    // Cinema-Overlays
+    if (F.cinema) drawVignette(F.vign !== undefined ? F.vign : 1);
+    if (F.dim > 0) { ctx.fillStyle = 'rgba(0,0,0,' + F.dim + ')'; ctx.fillRect(0, 0, W, H); }
+    const zs = F.zoomS || 1;
+    if (F.titleA > 0) {
+        drawCenteredText('PI CYCLE LAB', H * 0.42, W < 600 ? 42 : 104, '900', '#F7931A', 'rgba(247,147,26,0.9)', F.titleA, W < 600 ? 5 : 14, zs);
+        drawCenteredText('GREAT WALLY', H * 0.42 + (W < 600 ? 46 : 96) * zs, W < 600 ? 15 : 24, '700', 'rgba(255,255,255,0.75)', 'rgba(255,255,255,0.3)', F.titleA, W < 600 ? 4 : 9, zs);
+    }
+    if (F.story1A > 0) drawCenteredText(STORY1, H * 0.42, W < 600 ? 23 : 44, '600', 'rgba(255,255,255,0.95)', 'rgba(255,255,255,0.55)', F.story1A, 1, zs);
+    if (F.story2A > 0) drawCenteredText(STORY2, H * 0.54, W < 600 ? 25 : 50, '900', '#4ade80', 'rgba(74,222,128,0.8)', F.story2A, 1, zs);
+    if (F.shiftA > 0)  drawCenteredText('Dreh den Blick um.', H * 0.47, W < 600 ? 34 : 84, '900', '#4ade80', 'rgba(74,222,128,1)', F.shiftA, W < 600 ? 2 : 5, F.shiftS || 1);
+    if (F.caption)     drawCaption(F.caption.text, F.caption.a);
+}
+
+// Statischer Frame (alles sichtbar)
+function staticFrame() {
+    return {
+        grid: 1, zone: 1, fill: 1, greenBoost: 0,
+        p350: 1, p111: 1, aMA: 1, pPrice: 1, heat: 1,
+        topsA: TOPS.map(() => 1), botA: BOTTOMS.map(() => 1),
+        today: 1, dim: 0, titleA: 0, story1A: 0, story2A: 0, shiftA: 0,
+        caption: null, cinema: false
+    };
+}
+
+// ------------------------------------------------------------
+// Cinematic Mind-Shift — 30 Sekunden
+// ------------------------------------------------------------
+//  0.0– 4.5  Story: Titel + zwei Zeilen
+//  4.5– 6.0  Achsen faden ein
+//  6.0–11.0  Preis zeichnet sich (weißer Glow-Cursor)
+// 11.0–14.5  MA111, dann 2×MA350
+// 14.5–15.5  Spannungsband blendet ein
+// 15.5–18.0  TOP-Signale blitzen rot auf ("das kennt jeder")
+// 18.0–20.0  MIND-SHIFT: Dim + "Dreh den Blick um."
+// 20.0–26.0  Boden-Zone, Heatstrip, BODEN-Marker nacheinander
+// 26.0–30.0  HEUTE-Puls auf Juli 2026 + Abbinder
+// ------------------------------------------------------------
+function cinemaFrame(e, now) {
+    const F = staticFrame();
+    F.cinema = true;
+    F.grid = 0; F.zone = 0; F.fill = 0; F.p350 = 0; F.p111 = 0; F.aMA = 0;
+    F.pPrice = 0; F.heat = 0; F.today = 0;
+    F.topsA = TOPS.map(() => 0); F.botA = BOTTOMS.map(() => 0);
+    F.caption = null;
+
+    // Kino-Push-In: Texte wachsen langsam wie im Trailer
+    F.zoomS = 0.94 + 0.10 * clamp01(e / 4.5);
+    F.shiftS = 0.90 + 0.16 * clamp01((e - 18.0) / 2.0);
+    // Vignette: voll während der Story, danach dezent
+    F.vign = e < 4.5 ? 1 : Math.max(0.35, 1 - (e - 4.5) / 2);
+
+    // Phase 1: Story
+    if (e < 4.5) {
+        F.titleA  = easeOut(clamp01(e / 0.9)) * (1 - clamp01((e - 1.6) / 0.5));
+        F.story1A = easeOut(clamp01((e - 1.9) / 0.7)) * (1 - clamp01((e - 4.0) / 0.5));
+        F.story2A = easeOut(clamp01((e - 2.7) / 0.7)) * (1 - clamp01((e - 4.0) / 0.5));
+        return F;
+    }
+    // Phase 2: Achsen
+    F.grid = easeOut(clamp01((e - 4.5) / 1.4));
+    // Phase 3: Preis
+    F.pPrice = easeIO(clamp01((e - 6.0) / 5.0));
+    if (e >= 6.2 && e < 11.0) F.caption = { text: 'Bitcoin · Monatsschluss seit 2012', a: clamp01((e - 6.4) / 0.6) * (1 - clamp01((e - 10.4) / 0.6)) };
+    // Phase 4: MAs
+    F.aMA = clamp01((e - 11.0) / 0.4);
+    F.p111 = easeIO(clamp01((e - 11.0) / 1.8));
+    F.p350 = easeIO(clamp01((e - 12.6) / 1.8));
+    if (e >= 11.2 && e < 14.6) F.caption = { text: 'MA111 & 2×MA350 — die zwei Pi-Cycle-Linien', a: clamp01((e - 11.4) / 0.6) * (1 - clamp01((e - 14.1) / 0.5)) };
+    // Phase 5: Spannungsband + Tops
+    F.fill = easeOut(clamp01((e - 14.5) / 1.0));
+    TOPS.forEach((_, k) => {
+        const t0 = 15.5 + k * 0.55;
+        F.topsA[k] = easeOut(clamp01((e - t0) / 0.45));
+    });
+    if (e >= 15.6 && e < 18.0) F.caption = { text: 'Die bekannte Lesart: Linien kreuzen = TOP', a: clamp01((e - 15.8) / 0.5) * (1 - clamp01((e - 17.5) / 0.5)) };
+    // Phase 6: Mind-Shift
+    if (e >= 18.0 && e < 20.2) {
+        const p = (e - 18.0) / 2.2;
+        F.dim = 0.45 * Math.sin(Math.PI * clamp01(p));
+        F.shiftA = easeOut(clamp01((e - 18.2) / 0.6)) * (1 - clamp01((e - 19.5) / 0.6));
+    }
+    // Phase 7: Böden
+    F.greenBoost = easeOut(clamp01((e - 19.6) / 1.2));
+    F.zone = easeOut(clamp01((e - 20.0) / 1.2));
+    F.heat = easeOut(clamp01((e - 20.4) / 1.2));
+    BOTTOMS.forEach((bi, k) => {
+        const isCurrent = bi >= N - 6;
+        if (isCurrent) { F.botA[k] = easeOut(clamp01((e - 26.6) / 0.8)); return; }  // aktueller Boden erst im Finale
+        const t0 = 21.2 + k * 1.5;
+        F.botA[k] = easeOut(clamp01((e - t0) / 0.7));
+    });
+    if (e >= 21.0 && e < 26.0) F.caption = { text: 'Maximale Spreizung = maximale Entspannung = BODEN', a: clamp01((e - 21.2) / 0.6) * (1 - clamp01((e - 25.4) / 0.6)) };
+    // Phase 8: Heute
+    F.today = easeOut(clamp01((e - 26.0) / 1.0));
+    if (e >= 26.2) F.caption = { text: 'Juli 2026 — das Ratio dreht nach oben.', a: clamp01((e - 26.5) / 0.7) * (1 - clamp01((e - 29.2) / 0.8)) };
+    return F;
+}
+
+// ------------------------------------------------------------
+// Animations-Loop
+// ------------------------------------------------------------
+function loop(now) {
+    let F;
+    if (S.anim) {
+        const e = (now - S.anim.t0) / 1000;
+        if (e >= 30.5) { stopCinema(); F = staticFrame(); }
+        else F = cinemaFrame(e, now);
+    } else F = staticFrame();
+    render(now, F);
+    requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+function startCinema() {
+    if (S.anim) return;
+    S.anim = { t0: performance.now() };
+    document.body.classList.add('cinema');
+    hideTooltip();
+}
+function stopCinema() {
+    S.anim = null;
+    document.body.classList.remove('cinema');
+}
+
+// Versteckte Tastenfolge
+let lastKey = '', lastKeyT = 0;
+window.addEventListener('keydown', ev => {
+    const k = ev.key.toLowerCase();
+    if (k === 'escape') { stopCinema(); return; }
+    if (k === 't' && lastKey === 's' && performance.now() - lastKeyT < 500) { startCinema(); }
+    lastKey = k; lastKeyT = performance.now();
+});
+
+// ------------------------------------------------------------
+// Tooltip
+// ------------------------------------------------------------
+const tt = document.getElementById('tooltip');
+function hideTooltip() { tt.style.display = 'none'; S.hover = -1; }
+
+cv.addEventListener('mousemove', ev => {
+    if (S.anim) return;
+    const x = ev.clientX;
+    if (x < PAD.l - 10 || x > W - PAD.r + 10 || ev.clientY < PAD.t - 20 || ev.clientY > H - PAD.b + 40) { hideTooltip(); return; }
+    const i = Math.round((x - PAD.l) / (W - PAD.l - PAD.r) * (N - 1));
+    if (i < 0 || i >= N) { hideTooltip(); return; }
+    S.hover = i;
+    const d = DATA[i];
+    const rc = ratioColor(d[4], 1);
+    const status = d[4] < S.thr ? '🟢 Entspannung' : d[4] > 0.9 ? '🔴 Spannung' : '⚪ Neutral';
+    tt.innerHTML =
+        '<div class="tt-date">' + dLabel(i) + '</div>' +
+        '<div class="row"><span>Bitcoin</span><span class="val-p">' + fmt$(d[1]) + '</span></div>' +
+        '<div class="row"><span>MA111</span><span class="val-111">' + fmt$(d[3]) + '</span></div>' +
+        '<div class="row"><span>2×MA350</span><span class="val-350">' + fmt$(d[2]) + '</span></div>' +
+        '<div class="row"><span>Top-Ratio</span><span style="color:' + rc + ';font-weight:700">' + d[4].toFixed(3) + '</span></div>' +
+        '<div class="row"><span>Status</span><span>' + status + '</span></div>';
+    tt.style.display = 'block';
+    const bw = tt.offsetWidth, bh = tt.offsetHeight;
+    let tx = ev.clientX + 18, ty = ev.clientY - bh / 2;
+    if (tx + bw > W - 12) tx = ev.clientX - bw - 18;
+    ty = Math.max(10, Math.min(H - bh - 10, ty));
+    tt.style.left = tx + 'px'; tt.style.top = ty + 'px';
+});
+cv.addEventListener('mouseleave', hideTooltip);
+
+// ------------------------------------------------------------
+// Panel: Stats, Slider, Toggles, Drag
+// ------------------------------------------------------------
+function updateStats() {
+    const d = DATA[LAST];
+    document.getElementById('stPrice').textContent = fmt$(d[1]);
+    const rEl = document.getElementById('stRatio');
+    rEl.textContent = d[4].toFixed(3);
+    rEl.style.color = ratioColor(d[4], 1);
+    const badge = document.getElementById('statusBadge');
+    const sub = document.getElementById('statusSub');
+    // Tiefster Ratio-Wert der letzten 12 Monate
+    let minI = LAST;
+    for (let i = Math.max(0, N - 12); i < N; i++) if (DATA[i][4] < DATA[minI][4]) minI = i;
+    if (d[4] < S.thr) {
+        badge.className = 'calm';
+        const rising = d[4] > DATA[minI][4] + 0.005;
+        badge.textContent = rising ? '🟢 BODEN-ZONE · TOP-RATIO ↑' : '🟢 BODEN-ZONE AKTIV';
+        sub.textContent = 'Tief: ' + dLabel(minI) + ' · Top-Ratio ' + DATA[minI][4].toFixed(3);
+    } else if (d[4] > 0.9) {
+        badge.className = 'hot';
+        badge.textContent = '🔴 SPANNUNG · TOP-GEFAHR';
+        sub.textContent = 'Top-Ratio nähert sich der Kreuzung (1.0)';
+    } else {
+        badge.className = 'mid';
+        badge.textContent = '⚪ NEUTRALE ZONE';
+        sub.textContent = 'Schwelle: < ' + S.thr.toFixed(3);
+    }
+}
+
+document.getElementById('thrSlider').addEventListener('input', ev => {
+    S.thr = parseFloat(ev.target.value);
+    document.getElementById('thrVal').textContent = S.thr.toFixed(3);
+    BOTTOMS = findBottoms(S.thr);
+    updateStats();
+});
+
+const tgs = { tgMA111:'ma111', tgMA350:'ma350', tgFill:'fill', tgZone:'zone', tgBottoms:'bottoms', tgTops:'tops', tgHeat:'heat' };
+for (const [id, key] of Object.entries(tgs)) {
+    document.getElementById(id).addEventListener('change', ev => { S.show[key] = ev.target.checked; });
+}
+document.getElementById('tgLog').addEventListener('change', ev => { S.log = ev.target.checked; computeDomain(); });
+
+// Panel ein-/ausklappen
+const panel = document.getElementById('panel');
+document.getElementById('panelToggle').addEventListener('click', ev => {
+    ev.stopPropagation();
+    panel.classList.toggle('collapsed');
+    ev.target.textContent = panel.classList.contains('collapsed') ? '+' : '−';
+});
+
+// Panel-Drag
+(function() {
+    const head = document.getElementById('panelHead');
+    let sx, sy, px, py, drag = false;
+    head.addEventListener('pointerdown', ev => {
+        if (ev.target.id === 'panelToggle') return;
+        drag = true; sx = ev.clientX; sy = ev.clientY;
+        const r = panel.getBoundingClientRect(); px = r.left; py = r.top;
+        head.setPointerCapture(ev.pointerId);
+    });
+    head.addEventListener('pointermove', ev => {
+        if (!drag) return;
+        panel.style.left = Math.max(4, Math.min(W - 60, px + ev.clientX - sx)) + 'px';
+        panel.style.top = Math.max(4, Math.min(H - 40, py + ev.clientY - sy)) + 'px';
+        panel.style.right = 'auto'; panel.style.bottom = 'auto';
+    });
+    head.addEventListener('pointerup', () => drag = false);
+})();
+
+// ------------------------------------------------------------
+// Share
+// ------------------------------------------------------------
+const SHARE_TEXT = 'PI CYCLE LAB 🧪 Der Pi-Cycle-Indikator — von allen fürs TOP genutzt, hier als BODEN-Signal gelesen. GREAT WALLY';
+function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 1800);
+}
+document.getElementById('shLink').addEventListener('click', () => {
+    const url = location.href;
+    if (navigator.clipboard) navigator.clipboard.writeText(url).then(() => toast('✓ Link kopiert'));
+    else toast('URL: ' + url);
+});
+document.getElementById('shWa').href = 'https://wa.me/?text=' + encodeURIComponent(SHARE_TEXT + ' ' + location.href);
+document.getElementById('shX').href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(SHARE_TEXT);
+
+updateStats();
+</script>
+</body>
+</html>
