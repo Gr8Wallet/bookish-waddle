@@ -1,0 +1,2329 @@
+<meta charset="utf-8">
+<title>Bitcoin Zyklus-Labor — Uhr und Motor | GREAT WALLY</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#000}
+body{font-family:'Inter','Segoe UI',system-ui,sans-serif;color:#fff}
+canvas{display:block;position:fixed;inset:0}
+#panel{position:fixed;top:22px;right:22px;width:298px;background:rgba(10,10,12,.90);border:1px solid rgba(255,255,255,.13);border-radius:14px;backdrop-filter:blur(14px);z-index:20;font-size:13px;box-shadow:0 18px 50px rgba(0,0,0,.7)}
+#panel.collapsed #panel-body{display:none}
+#panel.collapsed{width:auto}
+/* eingeklappt nur noch ein kleiner Knopf — so reicht die Beweis-Box
+   im Standbild bis an den rechten Chartrand */
+#panel.collapsed .ttl{display:none}
+#panel.collapsed #panel-header{padding:11px 12px;cursor:pointer}
+#panel.collapsed #panel-toggle{margin-left:7px}
+#panel-header{display:flex;align-items:center;gap:9px;padding:12px 14px;cursor:grab;border-bottom:1px solid rgba(255,255,255,.09)}
+#panel.collapsed #panel-header{border-bottom:none}
+#panel-header .dot{width:9px;height:9px;border-radius:50%;background:#F7931A;box-shadow:0 0 11px #F7931A;flex:0 0 auto}
+#panel-header .ttl{font-weight:700;letter-spacing:.4px;font-size:12.5px;white-space:nowrap}
+#panel-toggle{margin-left:auto;background:none;border:none;color:rgba(255,255,255,.62);font-size:14px;cursor:pointer;padding:2px 5px;border-radius:5px}
+#panel-toggle:hover{background:rgba(255,255,255,.1);color:#fff}
+#panel-body{padding:13px 14px 15px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:13px}
+.st{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:7px 9px}
+.st .k{font-size:9.5px;text-transform:uppercase;letter-spacing:.7px;color:rgba(255,255,255,.46);margin-bottom:3px}
+.st .v{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
+.sec{font-size:9.5px;text-transform:uppercase;letter-spacing:.9px;color:rgba(255,255,255,.4);margin:13px 0 7px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,.07)}
+.row{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+.row label{flex:0 0 96px;font-size:11px;color:rgba(255,255,255,.66)}
+.row .val{flex:0 0 62px;text-align:right;font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums;color:#F7931A}
+input[type=range]{flex:1;-webkit-appearance:none;height:3px;background:rgba(255,255,255,.17);border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:#F7931A;cursor:pointer;box-shadow:0 0 9px rgba(247,147,26,.75)}
+.tgls{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.tg{display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,.7);cursor:pointer;user-select:none;padding:4px 6px;border-radius:7px}
+.tg:hover{background:rgba(255,255,255,.05)}
+.tg .box{width:13px;height:13px;border-radius:4px;border:1.5px solid rgba(255,255,255,.28);flex:0 0 auto;position:relative}
+.tg.on .box{background:#F7931A;border-color:#F7931A}
+.tg.on .box::after{content:'';position:absolute;left:3.5px;top:.5px;width:3.5px;height:7px;border:solid #000;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.modes{display:flex;gap:4px;margin-bottom:10px}
+.mode{flex:1;text-align:center;font-size:10px;padding:6px 2px;border-radius:7px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);cursor:pointer;color:rgba(255,255,255,.6);letter-spacing:.2px}
+.mode.on{background:rgba(247,147,26,.19);border-color:rgba(247,147,26,.55);color:#F7931A;font-weight:700}
+#mcbtn{width:100%;margin-top:9px;padding:8px;border-radius:8px;background:rgba(247,147,26,.15);border:1px solid rgba(247,147,26,.45);color:#F7931A;font-size:11.5px;font-weight:700;cursor:pointer;letter-spacing:.3px}
+#mcbtn:hover{background:rgba(247,147,26,.26)}
+#mcbtn:disabled{opacity:.5;cursor:default}
+.note{font-size:10px;line-height:1.45;color:rgba(255,255,255,.42);margin-top:9px}
+#rail{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:19;display:flex;align-items:center}
+#rail .tab{background:rgba(10,10,12,.88);border:1px solid rgba(255,255,255,.12);border-right:none;border-radius:10px 0 0 10px;padding:11px 6px;cursor:pointer;font-size:14px;color:rgba(255,255,255,.55)}
+#rail .items{display:flex;flex-direction:column;gap:6px;overflow:hidden;width:0;transition:width .28s ease;background:rgba(10,10,12,.88);border-radius:10px 0 0 10px}
+#rail:hover .items{width:46px;padding:7px 6px;border:1px solid rgba(255,255,255,.12);border-right:none}
+#rail .items a{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.72);text-decoration:none}
+#rail .items a svg{width:18px;height:18px;fill:currentColor;display:block}
+#rail .items a:hover{background:rgba(247,147,26,.25);color:#F7931A}
+#tip{position:fixed;pointer-events:none;z-index:30;background:rgba(8,8,10,.95);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:9px 11px;font-size:12px;display:none;min-width:186px;box-shadow:0 12px 34px rgba(0,0,0,.75)}
+#tip .d{font-size:10px;color:rgba(255,255,255,.5);margin-bottom:5px;letter-spacing:.4px}
+#tip .l{display:flex;justify-content:space-between;gap:16px;margin-top:3px;font-variant-numeric:tabular-nums}
+#tip .l span:first-child{color:rgba(255,255,255,.55);font-size:11px}
+#tip .l span:last-child{font-weight:700}
+</style>
+<body>
+<canvas id="c"></canvas>
+<div id="panel" class="collapsed">
+  <div id="panel-header"><div class="dot"></div><div class="ttl">ZYKLUS-LABOR · UHR &amp; MOTOR</div><button id="panel-toggle">▶</button></div>
+  <div id="panel-body">
+    <div class="stats">
+      <div class="st"><div class="k">Kurs</div><div class="v" id="s-px">—</div></div>
+      <div class="st"><div class="k" id="k-ref">Sinus-Modell</div><div class="v" id="s-tr" style="color:#F7931A">—</div></div>
+      <div class="st"><div class="k">Verhältnis</div><div class="v" id="s-ra">—</div></div>
+      <div class="st"><div class="k">Z-Wert</div><div class="v" id="s-z">—</div></div>
+      <div class="st"><div class="k">Tage seit Hoch</div><div class="v" id="s-dt">—</div></div>
+      <div class="st"><div class="k">vom Hoch</div><div class="v" id="s-dd">—</div></div>
+    </div>
+    <div class="sec">Beweis-Box</div>
+    <div class="modes">
+      <div class="mode on" data-m="0">Uhr</div><div class="mode" data-m="1">Motor</div>
+      <div class="mode" data-m="2">Scan</div><div class="mode" data-m="3">Monte&nbsp;Carlo</div>
+    </div>
+    <button id="mcbtn">▶ ZUFALLSPFADE RECHNEN</button>
+    <div class="note" id="mcnote">Erzeugt Irrfahrten mit Bitcoins eigener Drift und Wochen-Volatilität und wendet exakt dieselbe Zyklus-Suche darauf an.</div>
+    <div class="sec">Parameter</div>
+    <div class="row"><label>Sinus-Periode</label><input type="range" id="sl-per" min="250" max="600" step="1" value="357"><div class="val" id="v-per">3,57 J</div></div>
+    <div class="row"><label>Schätzfenster bis</label><input type="range" id="sl-cut" min="2016" max="2025" step="1" value="2022"><div class="val" id="v-cut">2021</div></div>
+    <div class="row"><label>Zufallspfade</label><input type="range" id="sl-sim" min="500" max="8000" step="500" value="2000"><div class="val" id="v-sim">2000</div></div>
+    <div class="sec">Ebenen</div>
+    <div class="tgls">
+      <div class="tg on" id="tg-tr"><div class="box"></div>Trend</div>
+      <div class="tg on" id="tg-si"><div class="box"></div>Sinus</div>
+      <div class="tg on" id="tg-gp"><div class="box"></div>Band</div>
+      <div class="tg on" id="tg-hs"><div class="box"></div>Heat-Strip</div>
+      <div class="tg on" id="tg-mk"><div class="box"></div>Marker</div>
+      <div class="tg" id="tg-oos"><div class="box"></div>2021er Modell</div>
+      <div class="tg on" id="tg-ref"><div class="box"></div>Bezug: Modell</div>
+    </div>
+    <div class="note">Band und Streifen färben den Abstand zur blauen Sinuskurve. Ausgeschaltet beziehen sie sich auf den Power-Law-Trend.</div>
+  </div>
+</div>
+<div id="rail">
+  <div class="tab">◂</div>
+  <div class="items">
+    <a href="#" id="sh-wa" title="WhatsApp" aria-label="WhatsApp"><svg viewBox="0 0 24 24"><path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.14-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.61-.92-2.21-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48s1.06 2.88 1.21 3.08c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.63.71.23 1.36.19 1.87.12.57-.09 1.76-.72 2-1.41.25-.7.25-1.29.17-1.42-.07-.13-.27-.2-.57-.35zM12.05 21.5h-.01a9.47 9.47 0 0 1-4.83-1.32l-.35-.21-3.59.94.96-3.5-.23-.36a9.44 9.44 0 0 1-1.45-5.05c0-5.23 4.26-9.48 9.5-9.48a9.44 9.44 0 0 1 6.71 2.78 9.4 9.4 0 0 1 2.78 6.71c0 5.23-4.26 9.49-9.49 9.49zM20.46 3.49A11.8 11.8 0 0 0 12.05 0C5.5 0 .16 5.33.16 11.89c0 2.1.55 4.14 1.59 5.95L.06 24l6.3-1.65a11.88 11.88 0 0 0 5.68 1.45h.01c6.55 0 11.89-5.33 11.89-11.89 0-3.18-1.24-6.16-3.48-8.42z"/></svg></a>
+    <a href="#" id="sh-x" title="X" aria-label="X"><svg viewBox="0 0 24 24"><path d="M18.9 1.15h3.68l-8.04 9.19L24 22.85h-7.41l-5.8-7.58-6.64 7.58H.46l8.6-9.83L0 1.15h7.59l5.24 6.93zm-1.29 19.49h2.04L6.49 3.24H4.3z"/></svg></a>
+    <a href="#" id="sh-yt" title="YouTube" aria-label="YouTube"><svg viewBox="0 0 24 24"><path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.5 3.55 12 3.55 12 3.55s-7.5 0-9.38.5A3.02 3.02 0 0 0 .5 6.19C0 8.08 0 12 0 12s0 3.92.5 5.81a3.02 3.02 0 0 0 2.12 2.14c1.88.5 9.38.5 9.38.5s7.5 0 9.38-.5a3.02 3.02 0 0 0 2.12-2.14C24 15.92 24 12 24 12s0-3.92-.5-5.81zM9.55 15.57V8.43L15.82 12z"/></svg></a>
+    <a href="#" id="sh-ln" title="Link kopieren" aria-label="Link kopieren"><svg viewBox="0 0 24 24"><path d="M8 13h8v-2H8v2zm-3.5-1A3.5 3.5 0 0 1 8 8.5h3V7H8a5 5 0 0 0 0 10h3v-1.5H8A3.5 3.5 0 0 1 4.5 12zM16 7h-3v1.5h3a3.5 3.5 0 0 1 0 7h-3V17h3a5 5 0 0 0 0-10z"/></svg></a>
+  </div>
+</div>
+<div id="tip"></div>
+<script>
+const CSV=`2009-10-05,0.00115
+2009-10-12,0.00123
+2009-10-19,0.00129
+2009-10-26,0.00122
+2009-11-02,0.00126
+2009-11-09,0.00124
+2009-11-16,0.00106
+2009-11-23,0.00083
+2009-11-30,0.00073
+2009-12-07,0.00062
+2009-12-14,0.00063
+2009-12-21,0.00063
+2009-12-28,0.00072
+2010-01-04,0.00072
+2010-01-11,0.0028
+2010-01-18,0.00325
+2010-01-25,0.0033
+2010-02-01,0.00374
+2010-02-08,0.00405
+2010-02-15,0.00466
+2010-02-22,0.0053
+2010-03-01,0.00547
+2010-04-19,0.003
+2010-04-26,0.003
+2010-05-03,0.0035
+2010-05-10,0.004
+2010-05-17,0.0045
+2010-05-24,0.0045
+2010-06-07,0.005
+2010-06-14,0.005
+2010-06-21,0.0044
+2010-06-28,0.0068
+2010-07-05,0.007
+2010-07-12,0.08584
+2010-07-19,0.0505
+2010-07-26,0.0611
+2010-08-02,0.0609
+2010-08-09,0.0653
+2010-08-16,0.066
+2010-08-23,0.064
+2010-08-30,0.0616
+2010-09-06,0.0615
+2010-09-13,0.0627
+2010-09-20,0.062
+2010-09-27,0.0611
+2010-10-04,0.0965
+2010-10-11,0.102
+2010-10-18,0.115
+2010-10-25,0.1925
+2010-11-01,0.34
+2010-11-08,0.279
+2010-11-15,0.277
+2010-11-22,0.27
+2010-11-29,0.19
+2010-12-06,0.22
+2010-12-13,0.24
+2010-12-20,0.265
+2010-12-27,0.3
+2011-01-03,0.323
+2011-01-10,0.387
+2011-01-17,0.442
+2011-01-24,0.48
+2011-01-31,0.898
+2011-02-07,1.05
+2011-02-14,0.85
+2011-02-21,0.89
+2011-02-28,0.9
+2011-03-07,0.892
+2011-03-14,0.741
+2011-03-21,0.822
+2011-03-28,0.779
+2011-04-04,0.737
+2011-04-11,1.112
+2011-04-18,1.631
+2011-04-25,3.033
+2011-05-02,3.866
+2011-05-09,6.987
+2011-05-16,6.69
+2011-05-23,8.43
+2011-05-30,16.7
+2011-06-06,18.546
+2011-06-13,17.51
+2011-06-27,15.44
+2011-07-04,14.9
+2011-07-11,13.16
+2011-07-18,13.98
+2011-07-25,13.35
+2011-08-01,7.9
+2011-08-08,10.796
+2011-08-15,11.311
+2011-08-22,9.07
+2011-08-29,8.178
+2011-09-05,5.864
+2011-09-12,5.2
+2011-09-19,5.33
+2011-09-26,5.027
+2011-10-03,4.103
+2011-10-10,3.557
+2011-10-17,3.17
+2011-10-24,3.27
+2011-10-31,2.96
+2011-11-07,2.997
+2011-11-14,2.2
+2011-11-21,2.48
+2011-11-28,2.828
+2011-12-05,3.251
+2011-12-12,3.193
+2011-12-19,4.225
+2011-12-26,5.268
+2012-01-02,7.114
+2012-01-09,7.002
+2012-01-16,6.31
+2012-01-23,5.381
+2012-01-30,5.689
+2012-02-06,5.515
+2012-02-13,4.387
+2012-02-20,4.922
+2012-02-27,4.82
+2012-03-05,4.91
+2012-03-12,5.279
+2012-03-19,4.55
+2012-03-26,4.827
+2012-04-02,4.793
+2012-04-09,4.969
+2012-04-16,5.204
+2012-04-23,4.904
+2012-04-30,5.05
+2012-05-07,4.93
+2012-05-14,5.09
+2012-05-21,5.139
+2012-05-28,5.205
+2012-06-04,5.468
+2012-06-11,6.164
+2012-06-18,6.35
+2012-06-25,6.629
+2012-07-02,6.799
+2012-07-09,7.621
+2012-07-16,8.41
+2012-07-23,8.71
+2012-07-30,10.87
+2012-08-06,11.624
+2012-08-13,8.0
+2012-08-20,10.61
+2012-08-27,10.204
+2012-09-03,11.02
+2012-09-10,11.87
+2012-09-17,12.193
+2012-09-24,12.4
+2012-10-01,11.8
+2012-10-08,11.739
+2012-10-15,11.631
+2012-10-22,10.7
+2012-10-29,10.8
+2012-11-05,10.869
+2012-11-12,11.652
+2012-11-19,12.482
+2012-11-26,12.5
+2012-12-03,13.29
+2012-12-10,13.3
+2012-12-17,13.312
+2012-12-24,13.45
+2012-12-31,13.454
+2013-01-07,14.116
+2013-01-14,15.7
+2013-01-21,17.818
+2013-01-28,20.59
+2013-02-04,23.97
+2013-02-11,26.815
+2013-02-18,29.89
+2013-02-25,34.5
+2013-03-04,46.0
+2013-03-11,47.4
+2013-03-18,71.5
+2013-03-25,93.03
+2013-04-01,162.3
+2013-04-08,90.0
+2013-04-15,119.2
+2013-04-22,134.44
+2013-04-29,115.98
+2013-05-06,114.82
+2013-05-13,122.5
+2013-05-20,133.5
+2013-05-27,122.5
+2013-06-03,100.44
+2013-06-10,99.9
+2013-06-17,108.2
+2013-06-24,97.51
+2013-07-01,76.5
+2013-07-08,94.42
+2013-07-15,92.0
+2013-07-22,98.78
+2013-07-29,105.12
+2013-08-05,105.0
+2013-08-12,113.38
+2013-08-19,122.11
+2013-08-26,146.01
+2013-09-02,126.32
+2013-09-09,138.3
+2013-09-16,134.0
+2013-09-23,143.88
+2013-09-30,137.8
+2013-10-07,147.53
+2013-10-14,186.12
+2013-10-21,207.0
+2013-10-28,224.01
+2013-11-04,336.33
+2013-11-11,528.32
+2013-11-18,795.0
+2013-11-25,1004.42
+2013-12-02,804.0
+2013-12-09,920.0
+2013-12-16,629.0
+2013-12-23,728.3
+2013-12-30,910.0
+2014-01-06,827.24
+2014-01-13,835.9
+2014-01-20,812.5
+2014-01-27,814.0
+2014-02-03,694.0
+2014-02-10,625.0
+2014-02-17,607.0
+2014-02-24,565.37
+2014-03-03,638.5
+2014-03-10,633.0
+2014-03-17,558.0
+2014-03-24,461.0
+2014-03-31,458.78
+2014-04-07,418.0
+2014-04-14,500.95
+2014-04-21,429.99
+2014-04-28,435.04
+2014-05-05,437.97
+2014-05-12,447.4
+2014-05-19,573.99
+2014-05-26,626.42
+2014-06-02,658.7
+2014-06-09,593.89
+2014-06-16,603.4
+2014-06-23,601.95
+2014-06-30,637.38
+2014-07-07,629.49
+2014-07-14,624.0
+2014-07-21,591.55
+2014-07-28,585.71
+2014-08-04,588.61
+2014-08-11,497.4
+2014-08-18,510.82
+2014-08-25,477.81
+2014-09-01,479.88
+2014-09-08,476.5
+2014-09-15,399.21
+2014-09-22,376.7
+2014-09-29,319.9
+2014-10-06,378.05
+2014-10-13,388.02
+2014-10-20,353.01
+2014-10-27,323.82
+2014-11-03,362.61
+2014-11-10,391.65
+2014-11-17,368.25
+2014-11-24,379.89
+2014-12-01,376.02
+2014-12-08,353.65
+2014-12-15,320.79
+2014-12-22,316.94
+2014-12-29,264.19
+2015-01-05,267.27
+2015-01-12,211.03
+2015-01-19,254.73
+2015-01-26,226.92
+2015-02-02,223.85
+2015-02-09,235.88
+2015-02-16,236.5
+2015-02-23,262.4
+2015-03-02,275.59
+2015-03-09,286.9
+2015-03-16,268.82
+2015-03-23,242.74
+2015-03-30,260.5
+2015-04-06,236.38
+2015-04-13,222.16
+2015-04-20,219.7
+2015-04-27,240.57
+2015-05-04,240.73
+2015-05-11,236.15
+2015-05-18,240.96
+2015-05-25,228.7
+2015-06-01,223.26
+2015-06-08,233.54
+2015-06-15,244.25
+2015-06-22,248.71
+2015-06-29,271.96
+2015-07-06,311.14
+2015-07-13,275.04
+2015-07-20,293.01
+2015-07-27,282.44
+2015-08-03,265.58
+2015-08-10,259.9
+2015-08-17,228.53
+2015-08-24,229.99
+2015-08-31,240.97
+2015-09-07,230.96
+2015-09-14,232.12
+2015-09-21,233.37
+2015-09-28,239.5
+2015-10-05,247.99
+2015-10-12,265.01
+2015-10-19,284.79
+2015-10-26,330.23
+2015-11-02,374.1
+2015-11-09,320.52
+2015-11-16,324.66
+2015-11-23,373.89
+2015-11-30,390.6
+2015-12-07,433.36
+2015-12-14,442.62
+2015-12-21,422.32
+2015-12-28,428.39
+2016-01-04,449.35
+2016-01-11,382.02
+2016-01-18,402.77
+2016-01-25,365.52
+2016-02-01,372.01
+2016-02-08,408.3
+2016-02-15,440.49
+2016-02-22,434.45
+2016-02-29,403.75
+2016-03-07,411.87
+2016-03-14,411.25
+2016-03-21,427.36
+2016-03-28,420.6
+2016-04-04,421.32
+2016-04-11,428.51
+2016-04-18,463.02
+2016-04-25,451.11
+2016-05-02,459.87
+2016-05-09,457.89
+2016-05-16,437.48
+2016-05-23,531.0
+2016-05-30,574.02
+2016-06-06,672.0
+2016-06-13,767.3
+2016-06-20,639.42
+2016-06-27,659.09
+2016-07-04,650.32
+2016-07-11,680.45
+2016-07-18,662.45
+2016-07-25,624.22
+2016-08-01,594.25
+2016-08-08,571.5
+2016-08-15,580.06
+2016-08-22,574.41
+2016-08-29,608.26
+2016-09-05,607.07
+2016-09-12,610.09
+2016-09-19,600.16
+2016-09-26,610.81
+2016-10-03,615.75
+2016-10-10,640.94
+2016-10-17,652.0
+2016-10-24,698.45
+2016-10-31,713.4
+2016-11-07,702.01
+2016-11-14,729.03
+2016-11-21,728.71
+2016-11-28,766.17
+2016-12-05,770.61
+2016-12-12,790.96
+2016-12-19,895.14
+2016-12-26,996.35
+2017-01-02,916.0
+2017-01-09,827.51
+2017-01-16,926.24
+2017-01-23,914.97
+2017-01-30,1014.3
+2017-02-06,1004.88
+2017-02-13,1055.5
+2017-02-20,1178.25
+2017-02-27,1273.49
+2017-03-06,1229.8
+2017-03-13,1016.51
+2017-03-20,965.52
+2017-03-27,1101.73
+2017-04-03,1209.56
+2017-04-10,1174.83
+2017-04-17,1246.07
+2017-04-24,1362.03
+2017-05-01,1567.73
+2017-05-08,1791.51
+2017-05-15,2027.91
+2017-05-22,2194.89
+2017-05-29,2523.06
+2017-06-05,2959.52
+2017-06-12,2512.47
+2017-06-19,2498.22
+2017-06-26,2508.61
+2017-07-03,2502.82
+2017-07-10,1910.16
+2017-07-17,2756.49
+2017-07-24,2753.84
+2017-07-31,3224.68
+2017-08-07,4061.17
+2017-08-14,4059.47
+2017-08-21,4339.28
+2017-08-28,4621.2
+2017-09-04,4252.04
+2017-09-11,3704.61
+2017-09-18,3668.48
+2017-09-25,4386.12
+2017-10-02,4599.0
+2017-10-09,5687.0
+2017-10-16,5986.66
+2017-10-23,6135.04
+2017-10-30,7384.79
+2017-11-06,5871.52
+2017-11-13,8023.85
+2017-11-20,9288.17
+2017-11-27,11251.58
+2017-12-04,15037.5
+2017-12-11,19128.27
+2017-12-18,14059.96
+2017-12-25,13888.32
+2018-01-01,16144.2
+2018-01-08,13660.42
+2018-01-15,11541.66
+2018-01-22,11621.15
+2018-01-29,8163.01
+2018-02-05,8067.5
+2018-02-12,10408.53
+2018-02-19,9590.76
+2018-02-26,11478.12
+2018-03-05,9531.52
+2018-03-12,8190.18
+2018-03-19,8452.08
+2018-03-26,6812.64
+2018-04-02,7021.12
+2018-04-09,8357.55
+2018-04-16,8799.19
+2018-04-23,9396.87
+2018-04-30,9607.08
+2018-05-07,8691.6
+2018-05-14,8517.35
+2018-05-21,7342.26
+2018-05-28,7709.21
+2018-06-04,6772.35
+2018-06-11,6446.43
+2018-06-18,6150.87
+2018-06-25,6347.71
+2018-07-02,6703.54
+2018-07-09,6345.36
+2018-07-16,7398.97
+2018-07-23,8215.66
+2018-07-30,7030.4
+2018-08-06,6314.31
+2018-08-13,6484.53
+2018-08-20,6706.69
+2018-08-27,7291.15
+2018-09-03,6289.41
+2018-09-10,6487.89
+2018-09-17,6638.72
+2018-09-24,6565.65
+2018-10-01,6572.83
+2018-10-08,6182.46
+2018-10-15,6412.98
+2018-10-22,6405.52
+2018-10-29,6422.51
+2018-11-05,6358.58
+2018-11-12,5560.15
+2018-11-19,3935.51
+2018-11-26,4102.1
+2018-12-03,3532.52
+2018-12-10,3192.87
+2018-12-17,3944.39
+2018-12-24,3831.04
+2018-12-31,4040.95
+2019-01-07,3514.22
+2019-01-14,3534.25
+2019-01-21,3531.82
+2019-01-28,3415.2
+2019-02-04,3648.38
+2019-02-11,3625.62
+2019-02-18,3732.4
+2019-02-25,3787.94
+2019-03-04,3898.96
+2019-03-11,3965.74
+2019-03-18,3970.09
+2019-03-25,4095.32
+2019-04-01,5193.97
+2019-04-08,5161.73
+2019-04-15,5296.64
+2019-04-22,5157.28
+2019-04-29,5714.35
+2019-05-06,6976.07
+2019-05-13,8196.84
+2019-05-20,8737.82
+2019-05-27,8739.82
+2019-06-03,7638.28
+2019-06-10,8978.8
+2019-06-17,10830.47
+2019-06-24,10754.92
+2019-07-01,11475.04
+2019-07-08,10299.7
+2019-07-15,10594.06
+2019-07-22,9530.33
+2019-07-29,10977.97
+2019-08-05,11530.87
+2019-08-12,10319.71
+2019-08-19,10136.39
+2019-08-26,9768.02
+2019-09-02,10403.67
+2019-09-09,10309.05
+2019-09-16,10026.95
+2019-09-23,8052.32
+2019-09-30,7859.23
+2019-10-07,8280.48
+2019-10-14,8234.77
+2019-10-21,9549.05
+2019-10-28,9205.71
+2019-11-04,9034.0
+2019-11-11,8500.63
+2019-11-18,6908.45
+2019-11-25,7403.88
+2019-12-02,7523.33
+2019-12-09,7114.98
+2019-12-16,7511.47
+2019-12-23,7387.96
+2019-12-30,7352.69
+2020-01-06,8178.0
+2020-01-13,8700.15
+2020-01-20,8590.48
+2020-01-27,9324.02
+2020-02-03,10167.71
+2020-02-10,9922.9
+2020-02-17,9968.39
+2020-02-24,8527.42
+2020-03-02,8036.48
+2020-03-09,5343.14
+2020-03-16,5824.09
+2020-03-23,5876.45
+2020-03-30,6777.02
+2020-04-06,6906.54
+2020-04-13,7130.28
+2020-04-20,7703.13
+2020-04-27,8908.39
+2020-05-04,8726.06
+2020-05-11,9670.71
+2020-05-18,8716.09
+2020-05-25,9448.95
+2020-06-01,9752.59
+2020-06-08,9329.7
+2020-06-15,9285.97
+2020-06-22,9116.24
+2020-06-29,9078.89
+2020-07-06,9302.39
+2020-07-13,9213.99
+2020-07-20,9942.85
+2020-07-27,11066.14
+2020-08-03,11687.82
+2020-08-10,11918.04
+2020-08-17,11650.99
+2020-08-24,11713.08
+2020-08-31,10258.09
+2020-09-07,10335.13
+2020-09-14,10921.11
+2020-09-21,10777.98
+2020-09-28,10673.18
+2020-10-05,11375.27
+2020-10-12,11513.13
+2020-10-19,13042.12
+2020-10-26,13768.19
+2020-11-02,15484.18
+2020-11-09,15969.75
+2020-11-16,18443.0
+2020-11-23,18197.32
+2020-11-30,19382.27
+2020-12-07,19164.8
+2020-12-14,23479.0
+2020-12-21,26259.12
+2020-12-28,33096.32
+2021-01-04,38173.35
+2021-01-11,35822.64
+2021-01-18,32291.01
+2021-01-25,33138.72
+2021-02-01,38868.57
+2021-02-08,48660.45
+2021-02-15,57492.04
+2021-02-22,45238.64
+2021-03-01,50977.29
+2021-03-08,58997.37
+2021-03-15,57378.63
+2021-03-22,55786.55
+2021-03-29,58210.95
+2021-04-05,59975.28
+2021-04-12,56271.87
+2021-04-19,49123.22
+2021-04-26,56625.77
+2021-05-03,58303.4
+2021-05-10,46456.47
+2021-05-17,34730.79
+2021-05-24,35676.71
+2021-05-31,35803.2
+2021-06-07,39026.53
+2021-06-14,35592.3
+2021-06-21,34690.98
+2021-06-28,35293.32
+2021-07-05,34251.96
+2021-07-12,31784.15
+2021-07-19,35428.27
+2021-07-26,39867.67
+2021-08-02,43842.62
+2021-08-09,47022.28
+2021-08-16,49288.9
+2021-08-23,48800.07
+2021-08-30,51791.64
+2021-09-06,46038.89
+2021-09-13,47249.35
+2021-09-20,43194.81
+2021-09-27,48235.6
+2021-10-04,54696.93
+2021-10-11,61532.17
+2021-10-18,60875.3
+2021-10-25,61357.63
+2021-11-01,63312.77
+2021-11-08,65502.47
+2021-11-15,58794.32
+2021-11-22,57322.77
+2021-11-29,49409.58
+2021-12-06,50112.02
+2021-12-13,46724.12
+2021-12-20,50801.7
+2021-12-27,47323.62
+2022-01-03,41865.65
+2022-01-10,43108.81
+2022-01-17,36292.06
+2022-01-24,37929.9
+2022-01-31,42417.63
+2022-02-07,42073.76
+2022-02-14,38386.55
+2022-02-21,37711.29
+2022-02-28,38423.0
+2022-03-07,37790.82
+2022-03-14,41277.41
+2022-03-21,46856.67
+2022-03-28,46415.99
+2022-04-04,42155.88
+2022-04-11,39687.65
+2022-04-18,39465.69
+2022-04-25,38479.3
+2022-05-02,34027.56
+2022-05-09,31293.29
+2022-05-16,30264.11
+2022-05-23,29449.54
+2022-05-30,29899.4
+2022-06-06,26565.12
+2022-06-13,20552.98
+2022-06-20,21029.53
+2022-06-27,19292.67
+2022-07-04,20843.12
+2022-07-11,20793.29
+2022-07-18,22586.22
+2022-07-25,23315.95
+2022-08-01,23181.62
+2022-08-08,24314.02
+2022-08-15,21495.97
+2022-08-22,19550.11
+2022-08-29,20004.08
+2022-09-05,21839.13
+2022-09-12,19420.94
+2022-09-19,18808.52
+2022-09-26,19057.33
+2022-10-03,19445.94
+2022-10-10,19263.43
+2022-10-17,19572.38
+2022-10-24,20628.62
+2022-10-31,20914.74
+2022-11-07,16309.05
+2022-11-14,16255.15
+2022-11-21,16423.94
+2022-11-28,17113.75
+2022-12-05,17089.92
+2022-12-12,16745.81
+2022-12-19,16828.91
+2022-12-26,16613.48
+2023-01-02,17124.86
+2023-01-09,20884.18
+2023-01-16,22717.7
+2023-01-23,23750.97
+2023-01-30,22938.34
+2023-02-06,21787.3
+2023-02-13,24288.51
+2023-02-20,23558.98
+2023-02-27,22428.98
+2023-03-06,22243.34
+2023-03-13,28051.94
+2023-03-20,28001.0
+2023-03-27,28189.84
+2023-04-03,28336.98
+2023-04-10,30325.58
+2023-04-17,27596.46
+2023-04-24,29248.47
+2023-05-01,28594.28
+2023-05-08,26930.75
+2023-05-15,26753.31
+2023-05-22,28082.01
+2023-05-29,27123.99
+2023-06-05,25940.01
+2023-06-12,26342.29
+2023-06-19,30473.14
+2023-06-26,30625.3
+2023-07-03,30174.62
+2023-07-10,30250.49
+2023-07-17,30092.75
+2023-07-24,29288.27
+2023-07-31,29053.48
+2023-08-07,29289.76
+2023-08-14,26196.16
+2023-08-21,26097.39
+2023-08-28,25972.31
+2023-09-04,25839.44
+2023-09-11,26538.19
+2023-09-18,26262.39
+2023-09-25,27995.39
+2023-10-02,27932.56
+2023-10-09,27174.56
+2023-10-16,30004.11
+2023-10-23,34538.5
+2023-10-30,35051.1
+2023-11-06,37067.98
+2023-11-13,37390.02
+2023-11-20,37458.92
+2023-11-27,39972.23
+2023-12-04,43794.17
+2023-12-11,41362.47
+2023-12-18,43028.98
+2023-12-25,42278.29
+2024-01-01,43942.3
+2024-01-08,41715.61
+2024-01-15,41586.94
+2024-01-22,42032.37
+2024-01-29,42578.24
+2024-02-05,48311.33
+2024-02-12,52127.48
+2024-02-19,51725.45
+2024-02-26,63148.92
+2024-03-04,69012.3
+2024-03-11,68376.06
+2024-03-18,67216.71
+2024-03-25,71320.68
+2024-04-01,69359.11
+2024-04-08,65754.76
+2024-04-15,64966.88
+2024-04-22,63134.46
+2024-04-29,64072.99
+2024-05-06,61492.91
+2024-05-13,66284.51
+2024-05-20,68506.03
+2024-05-27,67758.16
+2024-06-03,69643.44
+2024-06-10,66640.79
+2024-06-17,63198.38
+2024-06-24,62722.89
+2024-07-01,55891.87
+2024-07-08,60846.86
+2024-07-15,68185.35
+2024-07-22,68294.33
+2024-07-29,58148.99
+2024-08-05,58745.55
+2024-08-12,58469.35
+2024-08-19,64290.76
+2024-08-26,57349.8
+2024-09-02,54903.73
+2024-09-09,59170.86
+2024-09-16,63604.72
+2024-09-23,65643.25
+2024-09-30,62832.04
+2024-10-07,62878.8
+2024-10-14,69020.34
+2024-10-21,67964.35
+2024-10-28,68757.97
+2024-11-04,80410.55
+2024-11-11,89860.17
+2024-11-18,97964.32
+2024-11-25,97290.95
+2024-12-02,101197.25
+2024-12-09,104392.49
+2024-12-16,95122.16
+2024-12-23,93653.84
+2024-12-30,98344.63
+2025-01-06,94509.13
+2025-01-13,101234.81
+2025-01-20,102598.13
+2025-01-27,97661.91
+2025-02-03,96510.21
+2025-02-10,96163.25
+2025-02-17,96320.35
+2025-02-24,94322.37
+2025-03-03,80760.79
+2025-03-10,82619.12
+2025-03-17,86130.11
+2025-03-24,82404.35
+2025-03-31,78379.29
+2025-04-07,83710.02
+2025-04-14,85136.11
+2025-04-21,93787.64
+2025-04-28,94398.66
+2025-05-05,104118.91
+2025-05-12,106487.27
+2025-05-19,109004.27
+2025-05-26,105686.34
+2025-06-02,105790.15
+2025-06-09,105634.41
+2025-06-16,101049.94
+2025-06-23,108381.91
+2025-06-30,109263.55
+2025-07-07,119076.98
+2025-07-14,117302.7
+2025-07-21,119492.38
+2025-07-28,114278.96
+2025-08-04,119319.44
+2025-08-11,117489.98
+2025-08-18,113528.03
+2025-08-25,108296.74
+2025-09-01,111161.6
+2025-09-08,115394.18
+2025-09-15,115333.29
+2025-09-22,112224.62
+2025-09-29,123515.47
+2025-10-06,115128.32
+2025-10-13,108717.65
+2025-10-20,114527.25
+2025-10-27,110591.4
+2025-11-03,104727.44
+2025-11-10,94290.27
+2025-11-17,86849.17
+2025-11-24,90384.6
+2025-12-01,90428.85
+2025-12-08,88169.9
+2025-12-15,88656.04
+2025-12-22,87903.4
+2025-12-29,91489.5
+2026-01-05,90894.45
+2026-01-12,93638.28
+2026-01-19,86588.56
+2026-01-26,76919.18
+2026-02-02,70315.33
+2026-02-09,68811.0
+2026-02-16,67638.02
+2026-02-23,65772.2
+2026-03-02,65979.32
+2026-03-09,72823.68
+2026-03-16,67859.76
+2026-03-23,65969.06
+2026-03-30,68994.43
+2026-04-06,70740.61
+2026-04-13,73818.44
+2026-04-20,78670.41
+2026-04-27,78559.32
+2026-05-04,82179.7
+2026-05-11,77414.15
+2026-05-18,77019.19
+2026-05-25,73611.04
+2026-06-01,63334.01
+2026-06-08,65697.3
+2026-06-15,63249.45
+2026-06-22,59503.2
+2026-06-29,63603.38
+2026-07-06,63749.05
+2026-07-13,64701.37
+2026-07-20,65364.39
+2026-07-27,63525.12
+2026-08-03,64783.84`;
+</script>
+<script>
+/* ============================================================
+   BITCOIN ZYKLUS-LABOR — UHR UND MOTOR
+   Alle Kennzahlen werden hier aus den eingebetteten Rohdaten
+   gerechnet. Nichts ist vorab eingetragen.
+   Datenquelle: TradingView INDEX:BTCUSD, Wochenschlusskurse,
+   05.10.2009 - 03.08.2026, Export vom 3. August 2026.
+   ============================================================ */
+
+const HIST = CSV.trim().split('\n').map(r => { const [d, p] = r.split(','); return { date: d, price: +p }; });
+const H = HIST.length;
+const DATES = HIST.map(r => r.date);
+const PX = HIST.map(r => r.price);
+const GEN = Date.UTC(2009, 0, 3), DAY = 86400000;
+const tOf = ds => { const [y, m, d] = ds.split('-').map(Number); return (Date.UTC(y, m - 1, d) - GEN) / DAY / 365.25; };
+const TT = DATES.map(tOf);
+const LY = PX.map(Math.log);
+
+/* ---------- Schaetzfenster: erster echter Boersenkurs ---------- */
+const FIT_START = '2010-07-18';
+let I0F = 0; while (I0F < H - 1 && DATES[I0F] < FIT_START) I0F++;
+
+/* ---------- OLS ---------- */
+function ols(X, yv) {
+  const n = yv.length, k = X[0].length, A = [], b = [];
+  for (let i = 0; i < k; i++) {
+    A.push(new Float64Array(k)); let s = 0;
+    for (let r = 0; r < n; r++) s += X[r][i] * yv[r];
+    b.push(s);
+    for (let j = 0; j < k; j++) { let q = 0; for (let r = 0; r < n; r++) q += X[r][i] * X[r][j]; A[i][j] = q; }
+  }
+  const M = A.map((row, i) => { const a = Array.from(row); a.push(b[i]); return a; });
+  for (let c = 0; c < k; c++) {
+    let pv = c; for (let r = c + 1; r < k; r++) if (Math.abs(M[r][c]) > Math.abs(M[pv][c])) pv = r;
+    const tm = M[c]; M[c] = M[pv]; M[pv] = tm;
+    for (let r = 0; r < k; r++) { if (r === c) continue; const f = M[r][c] / M[c][c]; for (let j = c; j <= k; j++) M[r][j] -= f * M[c][j]; }
+  }
+  const co = []; for (let i = 0; i < k; i++) co.push(M[i][k] / M[i][i]);
+  const res = new Float64Array(n); let sse = 0, sy = 0;
+  for (let r = 0; r < n; r++) { let s = 0; for (let i = 0; i < k; i++) s += X[r][i] * co[i]; res[r] = yv[r] - s; sse += res[r] * res[r]; sy += yv[r]; }
+  const my = sy / n; let sst = 0; for (let r = 0; r < n; r++) sst += (yv[r] - my) ** 2;
+  return { co, res, r2: 1 - sse / sst, sse, sst };
+}
+
+/* ---------- Power-Law-Trend ueber das Schaetzfenster ---------- */
+function fitTrend(iEnd) {
+  const t = [], y = [];
+  for (let i = I0F; i <= iEnd; i++) { t.push([1, Math.log(TT[i])]); y.push(LY[i]); }
+  const f = ols(t, y);
+  return { a: f.co[0], b: f.co[1], r2: f.r2, res: f.res, i0: I0F, i1: iEnd };
+}
+const TREND = fitTrend(H - 1);
+const trendAt = t => Math.exp(TREND.a + TREND.b * Math.log(t));
+
+/* ---------- Sinus-Scan auf den Trendresiduen ---------- */
+function scanPeriods(iEnd, pMin, pMax, step) {
+  const idx = []; for (let i = I0F; i <= iEnd; i++) idx.push(i);
+  const t = idx.map(i => [1, Math.log(TT[i])]), y = idx.map(i => LY[i]);
+  const f = ols(t, y);
+  let sr2 = 0; for (let i = 0; i < f.res.length; i++) sr2 += f.res[i] * f.res[i];
+  const out = [];
+  for (let P = pMin; P <= pMax + 1e-9; P += step) {
+    const c = idx.map(i => Math.cos(2 * Math.PI * TT[i] / P)), s = idx.map(i => Math.sin(2 * Math.PI * TT[i] / P));
+    const ct = ols(t, c).res, st = ols(t, s).res;
+    let A = 0, B = 0, C = 0, u = 0, v = 0;
+    for (let i = 0; i < ct.length; i++) { A += ct[i] * ct[i]; B += st[i] * st[i]; C += ct[i] * st[i]; u += f.res[i] * ct[i]; v += f.res[i] * st[i]; }
+    const det = A * B - C * C, al = (B * u - C * v) / det, be = (A * v - C * u) / det;
+    out.push({ P: +P.toFixed(4), r2: (al * u + be * v) / sr2 });
+  }
+  return out;
+}
+const SCAN = scanPeriods(H - 1, 1.0, 8.0, 0.005);
+let BESTP = SCAN[0]; for (const s of SCAN) if (s.r2 > BESTP.r2) BESTP = s;
+const R2_AT4 = SCAN.reduce((a, b) => Math.abs(b.P - 4) < Math.abs(a.P - 4) ? b : a).r2;
+
+/* ---------- Vollmodell Trend + Sinus ---------- */
+function fitFull(P, iEnd) {
+  const X = [], y = [];
+  for (let i = I0F; i <= iEnd; i++) { X.push([1, Math.log(TT[i]), Math.cos(2 * Math.PI * TT[i] / P), Math.sin(2 * Math.PI * TT[i] / P)]); y.push(LY[i]); }
+  const f = ols(X, y);
+  return { co: f.co, r2: f.r2, P, iEnd };
+}
+const FULL = fitFull(BESTP.P, H - 1);
+const fullAt = (t, M) => Math.exp(M.co[0] + M.co[1] * Math.log(t) + M.co[2] * Math.cos(2 * Math.PI * t / M.P) + M.co[3] * Math.sin(2 * Math.PI * t / M.P));
+
+/* ---------- Zyklushochs und -tiefs (modellfrei) ----------
+   Hoch = Allzeithoch, auf das spaeter ein Rueckgang von >=50% folgt.
+   Zwei Zusatzregeln, damit ein Doppelhoch nicht als zwei Zyklen zaehlt:
+   (a) Aufeinanderfolgende Allzeithochs ohne 50%-Einbruch dazwischen
+       gelten als EIN Hoch (das letzte davon).
+   (b) Liegen zwei Hochs weniger als MIN_TOP_W Wochen auseinander, bleibt
+       nur das hoehere. Ein Zyklus kann nicht acht Monate dauern.
+   Dieselbe Definition wird auf Bitcoin UND auf jeden Zufallspfad
+   angewandt — sonst waere der Vergleich wertlos.                     */
+const MIN_TOP_W = 78;
+function detectTops(px, i0, minDD) {
+  const n = px.length, raw = [];
+  const futMin = new Float64Array(n); let m = Infinity;
+  for (let i = n - 1; i >= 0; i--) { futMin[i] = m; m = Math.min(m, px[i]); }
+  let runMax = -Infinity;
+  for (let i = i0; i < n - 1; i++) {
+    if (px[i] <= runMax) continue;
+    runMax = px[i];
+    if (1 - futMin[i] / px[i] >= minDD) raw.push(i);
+  }
+  const g = [];
+  for (const i of raw) {
+    if (!g.length) { g.push(i); continue; }
+    const pv = g[g.length - 1];
+    let mn = Infinity; for (let j = pv + 1; j <= i; j++) mn = Math.min(mn, px[j]);
+    if (1 - mn / px[pv] >= minDD) g.push(i); else g[g.length - 1] = i;
+  }
+  const out = [];
+  for (const i of g) {
+    if (out.length && i - out[out.length - 1] < MIN_TOP_W) {
+      if (px[i] > px[out[out.length - 1]]) out[out.length - 1] = i;
+    } else out.push(i);
+  }
+  return out;
+}
+function detectLows(px, tops) {
+  const out = [];
+  for (let k = 0; k < tops.length; k++) {
+    const a = tops[k], b = (k + 1 < tops.length) ? tops[k + 1] : px.length - 1;
+    let mi = a; for (let j = a; j <= b; j++) if (px[j] < px[mi]) mi = j;
+    out.push(mi);
+  }
+  return out;
+}
+const TOPS = detectTops(PX, I0F, 0.5);
+const LOWS = detectLows(PX, TOPS);
+const lastATHi = (() => { let m = I0F; for (let i = I0F; i < H; i++) if (PX[i] > PX[m]) m = i; return m; })();
+
+/* Zyklen: Tief -> darauffolgendes Hoch */
+const CYCLES = [];
+for (let k = 0; k < TOPS.length - 1; k++) {
+  const lo = LOWS[k], hi = TOPS[k + 1];
+  if (hi <= lo) continue;
+  CYCLES.push({ lo, hi, loD: DATES[lo], hiD: DATES[hi], loP: PX[lo], hiP: PX[hi], gain: PX[hi] / PX[lo], days: (hi - lo) * 7 });
+}
+/* nur die Zyklen mit >=3-facher Bewegung gelten als vollstaendige Zyklen */
+const BIGC = CYCLES.filter(c => c.gain >= 3);
+BIGC.forEach((c, i) => { c.nr = i + 1; c.ratTop = c.hiP / trendAt(TT[c.hi]); c.ratLow = c.loP / trendAt(TT[c.lo]); });
+const TOPGAPS = []; for (let k = 1; k < BIGC.length; k++) TOPGAPS.push((BIGC[k].hi - BIGC[k - 1].hi) * 7);
+const L2T = BIGC.map(c => c.days);
+const spreadOf = a => a.length ? Math.max(...a) - Math.min(...a) : 0;
+const last3 = a => a.slice(-3);
+const OBS_TOPSPREAD = spreadOf(last3(TOPGAPS));
+const OBS_L2TSPREAD = spreadOf(last3(L2T));
+
+/* Amplituden-Zerfall: log(Gewinn) ueber Zyklusnummer */
+const DEC = ols(BIGC.map(c => [1, c.nr]), BIGC.map(c => Math.log(c.gain)));
+const DECAY_FACTOR = Math.exp(-DEC.co[1]);
+/* Zerlegung: Trendanteil und Ausschlag-Anteil */
+BIGC.forEach(c => { c.trendGain = trendAt(TT[c.hi]) / trendAt(TT[c.lo]); c.excess = c.gain / c.trendGain; });
+const geo = a => Math.pow(a.reduce((x, y) => x * y, 1), 1 / a.length);
+const rTr = [], rEx = [];
+for (let i = 1; i < BIGC.length; i++) { rTr.push(BIGC[i - 1].trendGain / BIGC[i].trendGain); rEx.push(BIGC[i - 1].excess / BIGC[i].excess); }
+const DEC_TREND = geo(rTr), DEC_EXCESS = geo(rEx);
+
+/* Alternative Trendmodelle — damit der Forschungsweg belegbare Zahlen nennt
+   statt behaupteter. Werden nur zum Vergleich berichtet. */
+const TREND_ALT = (() => {
+  const idx = []; for (let i = I0F; i < H; i++) idx.push(i);
+  const y = idx.map(i => LY[i]);
+  const lin = ols(idx.map(i => [1, TT[i]]), y);
+  const quad = ols(idx.map(i => [1, Math.log(TT[i]), Math.pow(Math.log(TT[i]), 2)]), y);
+  return { linR2: lin.r2, quadR2: quad.r2 };
+})();
+/* Ereignisbasierte Zykluslaenge: mittlerer Hoch-zu-Hoch-Abstand */
+const EVENT_PERIOD = TOPGAPS.length ? (TOPGAPS.reduce((a, b) => a + b, 0) / TOPGAPS.length) / 365.25 : null;
+
+/* Renditetest: dieselbe Zyklussuche auf Wochenrenditen statt Niveaus.
+   Wird berichtet, aber NICHT als Beleg verwendet — Begruendung im
+   Forschungsweg-Protokoll. */
+const RET_TEST = (() => {
+  const t = [], y = [];
+  for (let i = I0F + 1; i < H; i++) { t.push(TT[i]); y.push(LY[i] - LY[i - 1]); }
+  const X = t.map(() => [1]);
+  const f = ols(X, y);
+  let sr2 = 0; for (let i = 0; i < f.res.length; i++) sr2 += f.res[i] * f.res[i];
+  let best = 0;
+  for (let P = 3; P <= 5.0001; P += 0.02) {
+    const c = t.map(v => Math.cos(2 * Math.PI * v / P)), s = t.map(v => Math.sin(2 * Math.PI * v / P));
+    const ct = ols(X, c).res, st = ols(X, s).res;
+    let A = 0, B = 0, C = 0, u = 0, w = 0;
+    for (let i = 0; i < ct.length; i++) { A += ct[i] * ct[i]; B += st[i] * st[i]; C += ct[i] * st[i]; u += f.res[i] * ct[i]; w += f.res[i] * st[i]; }
+    const det = A * B - C * C, al = (B * u - C * w) / det, be = (A * w - C * u) / det;
+    const R2 = (al * u + be * w) / sr2;
+    if (R2 > best) best = R2;
+  }
+  return best;
+})();
+
+/* Variationskoeffizienten: Timing gegen Amplitude.
+   Beide Seiten ueber DIESELBEN Zyklen, sonst waere der Vergleich geschoent. */
+function cv(a) { const m = a.reduce((x, y) => x + y, 0) / a.length; const sd = Math.sqrt(a.reduce((x, y) => x + (y - m) ** 2, 0) / (a.length - 1)); return sd / m; }
+const CV_TIME = cv(last3(L2T)), CV_GAIN = cv(last3(BIGC.map(c => c.gain)));
+const CV_TIME_ALL = cv(L2T), CV_GAIN_ALL = cv(BIGC.map(c => c.gain));
+/* modellfreier Kontrast: staerkster gegen schwaechsten Zyklus */
+const GAIN_SPAN = BIGC[0].gain / BIGC[BIGC.length - 1].gain;
+
+/* ---------- Verhaeltnis Kurs/Trend + Z-Wert ---------- */
+const D = [];
+for (let i = 0; i < H; i++) {
+  const inFit = i >= I0F;
+  const tr = inFit ? trendAt(TT[i]) : null;
+  D.push({ i, date: DATES[i], t: TT[i], price: PX[i], trend: tr, ratio: tr ? PX[i] / tr : null, inFit });
+}
+const RL = D.filter(d => d.inFit).map(d => Math.log(d.ratio));
+const RM = RL.reduce((a, b) => a + b, 0) / RL.length;
+const RS = Math.sqrt(RL.reduce((a, b) => a + (b - RM) ** 2, 0) / (RL.length - 1));
+D.forEach(d => { d.z = d.inFit ? (Math.log(d.ratio) - RM) / RS : null; });
+
+/* ---------- Bezugsgroesse fuer Band und Heat-Strip ----------
+   Wahlweise der nackte Power-Law-Trend oder das Sinus-Modell
+   (Trend x Zyklus). Gegen das Modell gemessen zeigt die Faerbung das,
+   was das Modell NICHT erklaert — gegen den Trend gemessen zeigt sie
+   vor allem den Zyklus selbst, den man im Chart ohnehin sieht.
+   Ergebnisse je Periode werden zwischengespeichert. */
+const REF_CACHE = {};
+function refData(P) {
+  const k = P.toFixed(3);
+  if (REF_CACHE[k]) return REF_CACHE[k];
+  const M = fitFull(P, H - 1);
+  const vals = new Float64Array(H), z = new Float64Array(H);
+  const logs = [];
+  for (let i = 0; i < H; i++) {
+    vals[i] = fullAt(TT[i], M);
+    if (i >= I0F) logs.push(Math.log(PX[i] / vals[i]));
+  }
+  const m = logs.reduce((a, b) => a + b, 0) / logs.length;
+  const sd = Math.sqrt(logs.reduce((a, b) => a + (b - m) ** 2, 0) / (logs.length - 1));
+  for (let i = 0; i < H; i++) z[i] = i >= I0F ? (Math.log(PX[i] / vals[i]) - m) / sd : 0;
+  const out = { M, vals, z, mean: m, sd, name: 'SINUS-MODELL', kurz: 'Modell' };
+  REF_CACHE[k] = out; return out;
+}
+
+/* ---------- Out-of-Sample-Modell (Schnittjahr aus dem Regler) ---------- */
+const OOS_CACHE = {};
+function oosModel(year) {
+  if (OOS_CACHE[year]) return OOS_CACHE[year];
+  let iEnd = H - 1; for (let i = H - 1; i >= 0; i--) if (DATES[i] < year + '-01-01') { iEnd = i; break; }
+  const sc = scanPeriods(iEnd, 3.0, 5.0, 0.01);
+  let b = sc[0]; for (const s of sc) if (s.r2 > b.r2) b = s;
+  const m = fitFull(b.P, iEnd);
+  m.cutIdx = iEnd; m.cutDate = DATES[iEnd]; m.r2cyc = b.r2;
+  /* prognostizierter naechster Zyklushochpunkt nach dem Schnitt */
+  let pt = null, pv = -1e9;
+  for (let t = TT[iEnd]; t <= TT[H - 1] + 1.5; t += 1 / 365.25) {
+    const cyc = m.co[2] * Math.cos(2 * Math.PI * t / m.P) + m.co[3] * Math.sin(2 * Math.PI * t / m.P);
+    if (cyc > pv) { pv = cyc; pt = t; }
+  }
+  m.peakT = pt; m.peakDate = new Date(GEN + pt * 365.25 * DAY).toISOString().slice(0, 10);
+  m.peakPrice = fullAt(pt, m);
+  m.predNow = fullAt(TT[H - 1], m);
+  /* Out-of-Sample-Guete */
+  let sse = 0, sy = 0, cnt = 0;
+  for (let i = iEnd + 1; i < H; i++) { sse += (LY[i] - Math.log(fullAt(TT[i], m))) ** 2; sy += LY[i]; cnt++; }
+  if (cnt) { const my = sy / cnt; let sst = 0; for (let i = iEnd + 1; i < H; i++) sst += (LY[i] - my) ** 2; m.r2oos = 1 - sse / sst; m.nOos = cnt; }
+  OOS_CACHE[year] = m; return m;
+}
+const OOS21 = oosModel(2022);   /* Schaetzung bis 31.12.2021 */
+
+/* ---------- Monte Carlo ---------- */
+const MC_SEED = 20260808;
+const MCP = []; for (let P = 1.0; P <= 8.0 + 1e-9; P += 0.05) MCP.push(+P.toFixed(3));
+const MCFIT = (() => {
+  const idx = []; for (let i = I0F; i < H; i++) idx.push(i);
+  const X = idx.map(i => [1, Math.log(TT[i])]);
+  const pre = MCP.map(P => {
+    const c = idx.map(i => Math.cos(2 * Math.PI * TT[i] / P)), s = idx.map(i => Math.sin(2 * Math.PI * TT[i] / P));
+    const ct = ols(X, c).res, st = ols(X, s).res;
+    let A = 0, B = 0, C = 0; for (let i = 0; i < ct.length; i++) { A += ct[i] * ct[i]; B += st[i] * st[i]; C += ct[i] * st[i]; }
+    return { P, ct, st, A, B, C, det: A * B - C * C };
+  });
+  return { idx, X, pre, n: idx.length };
+})();
+/* Drift und Volatilitaet aus den beobachteten Wochen-Logrenditen */
+const RET = []; for (let i = I0F + 1; i < H; i++) RET.push(LY[i] - LY[i - 1]);
+const MU = RET.reduce((a, b) => a + b, 0) / RET.length;
+const SD = Math.sqrt(RET.reduce((a, b) => a + (b - MU) ** 2, 0) / (RET.length - 1));
+/* Beobachteter Sinus-Bestwert auf demselben Raster wie die Simulation */
+const OBS_SINE = (() => {
+  const f = ols(MCFIT.X, MCFIT.idx.map(i => LY[i]));
+  let sr2 = 0; for (let i = 0; i < f.res.length; i++) sr2 += f.res[i] * f.res[i];
+  let mx = -1, mxP = 0;
+  for (const pr of MCFIT.pre) {
+    let u = 0, v = 0; for (let i = 0; i < pr.ct.length; i++) { u += f.res[i] * pr.ct[i]; v += f.res[i] * pr.st[i]; }
+    const al = (pr.B * u - pr.C * v) / pr.det, be = (pr.A * v - pr.C * u) / pr.det;
+    const R2 = (al * u + be * v) / sr2;
+    if (R2 > mx) { mx = R2; mxP = pr.P; }
+  }
+  return { r2: mx, P: mxP };
+})();
+
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function gauss(rng) { let u = 0, v = 0; while (u === 0) u = rng(); while (v === 0) v = rng(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+
+const MC = {
+  running: false, done: 0, total: 2000, rng: null,
+  sineGE: 0, topTighter: 0, topEligible: 0, l2tTighter: 0,
+  sineVals: [], ghost: null, lastPath: null, finished: false
+};
+function mcReset(total) {
+  MC.running = false; MC.done = 0; MC.total = total; MC.rng = mulberry32(MC_SEED);
+  MC.sineGE = 0; MC.topTighter = 0; MC.topEligible = 0; MC.l2tTighter = 0;
+  MC.sineVals = []; MC.ghost = null; MC.lastPath = null; MC.finished = false;
+}
+mcReset(2000);
+
+function mcOne() {
+  const n = MCFIT.n, ys = new Float64Array(n), ps = new Float64Array(n);
+  ys[0] = LY[I0F]; ps[0] = Math.exp(ys[0]);
+  for (let i = 1; i < n; i++) { ys[i] = ys[i - 1] + MU + SD * gauss(MC.rng); ps[i] = Math.exp(ys[i]); }
+  /* Sinus-Test: exakt dieselbe Suche wie bei den echten Daten */
+  const f = ols(MCFIT.X, Array.from(ys));
+  let sr2 = 0; for (let i = 0; i < n; i++) sr2 += f.res[i] * f.res[i];
+  let mx = -1;
+  for (const pr of MCFIT.pre) {
+    let u = 0, v = 0; const ct = pr.ct, st = pr.st;
+    for (let i = 0; i < n; i++) { u += f.res[i] * ct[i]; v += f.res[i] * st[i]; }
+    const al = (pr.B * u - pr.C * v) / pr.det, be = (pr.A * v - pr.C * u) / pr.det;
+    const R2 = (al * u + be * v) / sr2;
+    if (R2 > mx) mx = R2;
+  }
+  if (mx >= OBS_SINE.r2) MC.sineGE++;
+  if (MC.sineVals.length < 4000) MC.sineVals.push(mx);
+  /* Timing-Test: dieselbe Hoch-Definition */
+  const tp = detectTops(ps, 0, 0.5);
+  if (tp.length >= 4) {
+    MC.topEligible++;
+    const g = []; for (let k = 1; k < tp.length; k++) g.push((tp[k] - tp[k - 1]) * 7);
+    if (spreadOf(last3(g)) <= OBS_TOPSPREAD) MC.topTighter++;
+    const lw = detectLows(ps, tp), l2 = [];
+    for (let k = 0; k < tp.length - 1; k++) l2.push((tp[k + 1] - lw[k]) * 7);
+    if (spreadOf(last3(l2)) <= OBS_L2TSPREAD) MC.l2tTighter++;
+  }
+  MC.lastPath = ps;
+  MC.done++;
+}
+function mcPump() {
+  if (!MC.running) return;
+  const t0 = performance.now();
+  while (MC.done < MC.total && performance.now() - t0 < 14) mcOne();
+  if (MC.done >= MC.total) { MC.running = false; MC.finished = true; document.getElementById('mcbtn').disabled = false; document.getElementById('mcbtn').textContent = '↻ NEU RECHNEN'; }
+  updateMcNote(); render();
+  if (MC.running) requestAnimationFrame(mcPump);
+}
+function updateMcNote() {
+  const el = document.getElementById('mcnote');
+  if (!MC.done) { el.textContent = 'Erzeugt Irrfahrten mit Bitcoins eigener Drift und Wochen-Volatilität und wendet exakt dieselbe Zyklus-Suche darauf an.'; return; }
+  const pS = MC.sineGE / MC.done, pT = MC.topEligible ? MC.topTighter / MC.topEligible : 0;
+  el.innerHTML = MC.done + ' von ' + MC.total + ' Pfaden.<br>Sinus stärker als Bitcoin: <b style="color:#ff5b5b">' + MC.sineGE + '</b> (' + (pS * 100).toFixed(1) + ' %)<br>Timing pünktlicher: <b style="color:#38d17a">' + MC.topTighter + '</b> von ' + MC.topEligible + ' (' + (pT * 100).toFixed(2) + ' %)';
+}
+
+/* ================= Rendering ================= */
+/* ---- Wortmarke ----
+   Zwei Zeilen, exakt gleich breit und bündig übereinander.
+   „GREAT" und „Y" weiss, „WALL" in Bitcoin-Orange. */
+const WM1 = 'GREAT', WM2A = 'WALL', WM2B = 'Y';
+const WM_WEISS = '#FFFFFF', WM_ORANGE = '#F7931A';
+
+const cvs = document.getElementById('c'), ctx = cvs.getContext('2d');
+const S = {
+  W: 0, H: 0, padL: 92, padR: 92, padT: 92, padB: 152,
+  aTrend: 1, aSine: 1, aGap: 1, aHS: 1, aMK: 1, aOOS: 0,
+  period: 3.57, cutYear: 2022, nsim: 2000, mode: 0,
+  ref: 'model',            /* Bezug fuer Band und Heat-Strip */
+  hover: -1, drag: null, cinema: null
+};
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  S.W = window.innerWidth; S.H = window.innerHeight;
+  cvs.width = Math.round(S.W * dpr); cvs.height = Math.round(S.H * dpr);
+  cvs.style.width = S.W + 'px'; cvs.style.height = S.H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  S.padL = S.W < 900 ? 62 : 92; S.padR = S.W < 900 ? 34 : 92;
+  /* padB traegt drei Zeilen: Jahreszahlen, Heat-Strip, Wortmarke */
+  S.padT = S.W < 900 ? 70 : 92; S.padB = S.W < 900 ? 162 : 206;
+}
+resize();
+window.addEventListener('resize', () => { resize(); render(); });
+
+const area = () => ({ x: S.padL, y: S.padT, w: S.W - S.padL - S.padR, h: S.H - S.padT - S.padB });
+/* Die Achse beginnt beim ersten vorhandenen Kurs, nicht am Genesis-Block.
+   Der Nullpunkt der Power-Law-Regression liegt davon unabhängig auf dem
+   03.01.2009 — das ist die Rechnung, nicht die Darstellung. */
+const V = { t0: TT[0], t1: TT[H - 1], l0: -1, l1: 6 };
+function view() {
+  V.t0 = TT[0]; V.t1 = TT[H - 1];
+  let mx = 0; for (let i = 0; i < H; i++) mx = Math.max(mx, PX[i]);
+  mx = Math.max(mx, trendAt(TT[H - 1]) * 1.25);
+  V.l0 = -1; V.l1 = Math.log10(mx * 1.7);   /* Achse beginnt bei 0,10 $ */
+}
+view();
+const xT = t => { const a = area(); return a.x + (t - V.t0) / (V.t1 - V.t0) * a.w; };
+const xP = i => xT(TT[i]);
+const yearT = yy => (Date.UTC(yy, 0, 1) - GEN) / DAY / 365.25;
+/* nächstgelegener Datenindex zu einer Bildschirm-x-Position */
+function idxAtX(px) {
+  const a = area();
+  const t = V.t0 + (px - a.x) / a.w * (V.t1 - V.t0);
+  let lo = 0, hi = H - 1;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (TT[m] < t) lo = m + 1; else hi = m; }
+  if (lo > 0 && Math.abs(TT[lo - 1] - t) < Math.abs(TT[lo] - t)) lo--;
+  return lo;
+}
+const yP = v => { const a = area(); if (!(v > 0)) v = 1e-9; return a.y + (V.l1 - Math.log10(v)) / (V.l1 - V.l0) * a.h; };
+
+/* Filmkorn als vorgerenderte Kachel */
+const GRAIN = document.createElement('canvas'); GRAIN.width = GRAIN.height = 160;
+(() => { const g = GRAIN.getContext('2d'), im = g.createImageData(160, 160);
+  for (let i = 0; i < im.data.length; i += 4) { const v = 118 + Math.random() * 74; im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 255; }
+  g.putImageData(im, 0, 0); })();
+
+const fmtUSD = v => Math.round(v).toLocaleString('de-DE') + ' $';
+const fmtK = v => v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1000 ? (v / 1000).toFixed(v >= 10000 ? 0 : 1) + 'K' : v >= 1 ? v.toFixed(v >= 100 ? 0 : 2) : v.toPrecision(2);
+/* Achsenbeschriftung: Zehnerpotenzen ohne Nachkommastellen, deutsches Komma */
+const fmtAxis = v => v >= 1000 ? String(Math.round(v / 1000)) + 'K' : v >= 1 ? String(Math.round(v)) : v.toFixed(2).replace('.', ',');
+const MON = ['Jan.', 'Feb.', 'März', 'Apr.', 'Mai', 'Juni', 'Juli', 'Aug.', 'Sept.', 'Okt.', 'Nov.', 'Dez.'];
+const fmtD = ds => { const [y, m, d] = ds.split('-'); return +d + '. ' + MON[+m - 1] + ' ' + y; };
+const eo = t => t >= 1 ? 1 : t <= 0 ? 0 : 1 - Math.pow(1 - t, 3);
+const ei = t => t >= 1 ? 1 : t <= 0 ? 0 : t * t * t;
+const clamp01 = t => t < 0 ? 0 : t > 1 ? 1 : t;
+const seg = (t, a, b) => clamp01((t - a) / (b - a));
+
+/* Farbsemantik: gruen = unter dem Trend, rot = darueber. Ueberall gleich.
+   HS_ALPHA gilt fuer Heat-Strip UND Gap-Band, damit beide identisch sind. */
+/* deckend: bei Teiltransparenz scheinen im Band die Gitterlinien durch,
+   im Streifen nicht — dann wären die Farben nicht mehr exakt gleich */
+const HS_ALPHA = 1;
+function heatHue(z) { return clamp01((2.2 - z) / 4.4) * 145; }
+function heatCol(z, al) { return 'hsla(' + heatHue(z).toFixed(0) + ',85%,50%,' + al + ')'; }
+
+/* Bezugskurve fuer Band, Streifen, Tooltip und Kacheln — eine Quelle */
+let TREND_REF = null;
+function trendRef() {
+  if (!TREND_REF) {
+    const vals = new Float64Array(H), z = new Float64Array(H);
+    for (let i = 0; i < H; i++) { vals[i] = D[i].inFit ? D[i].trend : 0; z[i] = D[i].inFit ? D[i].z : 0; }
+    TREND_REF = { vals, z, name: 'POWER-LAW-TREND', kurz: 'Trend' };
+  }
+  return TREND_REF;
+}
+function currentRef() { return S.ref === 'model' ? refData(S.period) : trendRef(); }
+
+/* Liegt ein Rechteck auf einer der gezeichneten Kurven?
+   Prüft Kurs, Trend und den tiefstmöglichen Stand der Sinuskurve.
+   Sichert die Platzierung der Beweis-Box ab. */
+function hitsCurve(b) {
+  const amp = Math.sqrt(FULL.co[2] * FULL.co[2] + FULL.co[3] * FULL.co[3]);
+  for (let i = 0; i < H; i++) {
+    const x = xP(i);
+    if (x < b.x0 - 6 || x > b.x1 + 6) continue;
+    if (yP(PX[i]) >= b.y0 - 4 && yP(PX[i]) <= b.y1 + 4) return true;
+    if (D[i].inFit) {
+      const tr = D[i].trend;
+      if (yP(tr) >= b.y0 - 4 && yP(tr) <= b.y1 + 4) return true;
+      if (yP(tr * Math.exp(-amp)) >= b.y0 - 4 && yP(tr * Math.exp(-amp)) <= b.y1 + 4) return true;
+      if (yP(tr * Math.exp(amp)) >= b.y0 - 4 && yP(tr * Math.exp(amp)) <= b.y1 + 4) return true;
+    }
+  }
+  return false;
+}
+function rRect(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.quadraticCurveTo(x + w, y, x + w, y + r); c.lineTo(x + w, y + h - r); c.quadraticCurveTo(x + w, y + h, x + w - r, y + h); c.lineTo(x + r, y + h); c.quadraticCurveTo(x, y + h, x, y + h - r); c.lineTo(x, y + r); c.quadraticCurveTo(x, y, x + r, y); c.closePath(); }
+function diamond(c, x, y, s) { c.beginPath(); c.moveTo(x, y - s); c.lineTo(x + s, y); c.lineTo(x, y + s); c.lineTo(x - s, y); c.closePath(); c.fill(); }
+function wrapT(text, maxW, c) { const L = []; for (const s of String(text).split('\n')) { const w = s.split(' '); let cur = ''; for (const x of w) { const t = cur ? cur + ' ' + x : x; if (c.measureText(t).width > maxW && cur) { L.push(cur); cur = x; } else cur = t; } L.push(cur); } return L; }
+
+/* ===================== render ===================== */
+function render(now, F) {
+  now = now || performance.now();
+  F = F || {};
+  if (cvs.width !== Math.round(S.W * Math.min(window.devicePixelRatio || 1, 2)) || S.W !== window.innerWidth || S.H !== window.innerHeight) resize();
+  const a = area();
+  const pP = F.priceProg == null ? 1 : F.priceProg;
+  const tP = F.trendProg == null ? 1 : F.trendProg;
+  const sP = F.sineProg == null ? 1 : F.sineProg;
+  const mP = F.mkProg == null ? 1 : F.mkProg;
+  const hP = F.hsProg == null ? 1 : F.hsProg;
+  const dim = F.dim == null ? 0 : F.dim;
+  const zoomK = F.push == null ? 0 : F.push;
+
+  ctx.clearRect(0, 0, S.W, S.H);
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, S.W, S.H);
+
+  ctx.save();
+  /* langsame Push-in-Fahrt nur auf der Datenebene */
+  if (zoomK) { const k = 1 + zoomK * 0.075; ctx.translate(S.W / 2, S.H / 2); ctx.scale(k, k); ctx.translate(-S.W / 2, -S.H / 2); }
+  ctx.globalAlpha = 1 - dim * 0.82;
+
+  /* ---- Gitter + Achsen ---- */
+  const axA = F.axProg == null ? 1 : F.axProg;
+  if (axA > 0.01) {
+    ctx.save(); ctx.globalAlpha *= axA;
+    ctx.strokeStyle = 'rgba(255,255,255,.055)'; ctx.lineWidth = 1;
+    ctx.font = '700 ' + (S.W < 900 ? 18 : 27) + 'px Inter,system-ui,sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,.82)'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (let e = -1; e <= Math.ceil(V.l1); e++) {
+      const v = Math.pow(10, e), y = yP(v);
+      if (y < a.y - 8 || y > a.y + a.h + 8) continue;
+      ctx.beginPath(); ctx.moveTo(a.x, y); ctx.lineTo(a.x + a.w, y); ctx.stroke();
+      ctx.fillText('$' + fmtAxis(v), a.x - 12, y);
+    }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    const stepY = S.W < 900 ? 4 : 2;
+    for (let yy = 2010; yy <= 2026; yy += stepY) {
+      const x = xT(yearT(yy));
+      if (x < a.x - 2 || x > a.x + a.w + 2) continue;
+      ctx.strokeStyle = 'rgba(255,255,255,.045)'; ctx.beginPath(); ctx.moveTo(x, a.y); ctx.lineTo(x, a.y + a.h); ctx.stroke();
+      ctx.fillText(String(yy), x, a.y + a.h + 12);
+    }
+    ctx.restore();
+  }
+
+  const nVis = Math.max(2, Math.round(pP * (H - 1)));
+
+  /* Datenebene auf die Zeichenfläche beschneiden: die Achse beginnt bei
+     0,10 $, die Kurse davor laufen unten aus dem Bild statt in die
+     Beschriftung hinein. */
+  ctx.save();
+  ctx.beginPath(); ctx.rect(a.x, a.y - 6, a.w, a.h + 6); ctx.clip();
+
+  /* ---- Fill-Band zwischen Kurs und Trend ----
+     EXAKT dieselbe Farbe wie der Heat-Strip darunter, gleiche Deckkraft.
+     Wer die Bandfarbe an einer Stelle abliest, liest denselben Wert wie
+     senkrecht darunter im Streifen. */
+  const REF = currentRef();
+  if (S.aGap > 0.01 && tP > 0.02) {
+    const upto = Math.min(nVis, H - 1);
+    for (let i = I0F; i < upto; i++) {
+      if (!D[i].inFit || !D[i + 1].inFit) continue;
+      ctx.fillStyle = heatCol(REF.z[i], HS_ALPHA * S.aGap * tP);
+      ctx.beginPath();
+      ctx.moveTo(xP(i), yP(PX[i])); ctx.lineTo(xP(i + 1), yP(PX[i + 1]));
+      ctx.lineTo(xP(i + 1), yP(REF.vals[i + 1])); ctx.lineTo(xP(i), yP(REF.vals[i]));
+      ctx.closePath(); ctx.fill();
+    }
+  }
+
+  /* ---- Zufallspfade (Geisterlinien) ---- */
+  if (F.ghosts && F.ghosts.length) {
+    ctx.save(); ctx.lineWidth = 1.1;
+    F.ghosts.forEach((g, k) => {
+      ctx.strokeStyle = 'rgba(150,170,255,' + (0.055 + 0.05 * (k / F.ghosts.length)) * (F.ghostAlpha == null ? 1 : F.ghostAlpha) + ')';
+      ctx.beginPath();
+      for (let i = 0; i < g.length; i += 2) { const x = xP(I0F + i), y = yP(g[i]); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+
+  /* ---- Preislinie ---- */
+  ctx.save();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = S.W < 900 ? 3 : 4.4; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  ctx.shadowColor = 'rgba(255,255,255,.6)'; ctx.shadowBlur = 15;
+  ctx.globalAlpha *= (F.priceAlpha == null ? 1 : F.priceAlpha);
+  ctx.beginPath();
+  for (let i = 0; i <= nVis; i++) { const x = xP(i), y = yP(PX[i]); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+  ctx.stroke();
+  if (pP < 0.999) { const x = xP(nVis), y = yP(PX[nVis]); ctx.fillStyle = '#fff'; ctx.shadowBlur = 22; ctx.beginPath(); ctx.arc(x, y, 4.6, 0, 7); ctx.fill(); }
+  ctx.restore();
+
+  /* ---- Power-Law-Trend (orange) ---- */
+  if (S.aTrend > 0.01 && tP > 0.005) {
+    const n1 = I0F + Math.round(tP * (H - 1 - I0F));
+    ctx.save(); ctx.strokeStyle = '#F7931A'; ctx.lineWidth = S.W < 900 ? 2.8 : 3.8;
+    ctx.globalAlpha *= S.aTrend; ctx.shadowColor = 'rgba(247,147,26,.65)'; ctx.shadowBlur = 14;
+    ctx.beginPath();
+    for (let i = I0F; i <= n1; i++) { const x = xP(i), y = yP(trendAt(TT[i])); i === I0F ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+    ctx.stroke(); ctx.restore();
+  }
+
+  /* ---- Sinus-Modell (Trend x Zyklus) ---- */
+  if (S.aSine > 0.01 && sP > 0.005) {
+    const M = refData(S.period).M;
+    const n1 = I0F + Math.round(sP * (H - 1 - I0F));
+    ctx.save(); ctx.strokeStyle = 'rgba(120,190,255,.95)'; ctx.lineWidth = S.W < 900 ? 2.4 : 3.2;
+    ctx.globalAlpha *= S.aSine; ctx.setLineDash([]);
+    ctx.shadowColor = 'rgba(120,190,255,.5)'; ctx.shadowBlur = 10;
+    ctx.beginPath();
+    for (let i = I0F; i <= n1; i++) { const x = xP(i), y = yP(fullAt(TT[i], M)); i === I0F ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+    ctx.stroke(); ctx.restore();
+  }
+
+  /* ---- 2021er Modell: in-sample durchgezogen, danach gestrichelt und gedimmt ---- */
+  if (S.aOOS > 0.01) {
+    const M = oosModel(S.cutYear);
+    ctx.save(); ctx.globalAlpha *= S.aOOS;
+    ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 3.4; ctx.setLineDash([]);
+    ctx.beginPath();
+    for (let i = I0F; i <= M.cutIdx; i++) { const x = xP(i), y = yP(fullAt(TT[i], M)); i === I0F ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+    ctx.stroke();
+    ctx.globalAlpha *= 0.34; ctx.setLineDash([8, 7]); ctx.lineWidth = 2.8;
+    ctx.beginPath();
+    for (let i = M.cutIdx; i < H; i++) { const x = xP(i), y = yP(fullAt(TT[i], M)); i === M.cutIdx ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+    ctx.stroke(); ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  ctx.restore();   /* Ende der beschnittenen Datenebene */
+
+  /* ---- Heat-Strip als Wischblende ---- */
+  if (S.aHS > 0.01 && hP > 0.005) {
+    const y0 = a.y + a.h + (S.W < 900 ? 46 : 56), hh = S.W < 900 ? 26 : 34;
+    const total = H - 1 - I0F, upto = I0F + Math.round(hP * total);
+    ctx.save(); ctx.globalAlpha *= S.aHS;
+    for (let i = I0F; i < upto; i++) {
+      if (!D[i].inFit) continue;
+      const dist = upto - i, lead = dist < 50 ? (1 - dist / 50) : 0;
+      ctx.fillStyle = heatCol(REF.z[i], HS_ALPHA + (1 - HS_ALPHA) * lead);
+      const x = xP(i), w = Math.max(1.15, xP(i + 1) - x);
+      ctx.fillRect(x, y0 - lead * 2.2, w + 0.5, hh + lead * 4.4);
+    }
+    if (hP < 0.999 && upto > I0F) {
+      const x = xP(upto);
+      ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.shadowColor = 'rgba(255,255,255,.9)'; ctx.shadowBlur = 16;
+      ctx.fillRect(x - 1.5, y0 - 4, 3, hh + 8); ctx.shadowBlur = 0;
+    }
+    /* Beschriftung UNTER dem Streifen: im Streifen würde sie die
+       jüngsten zwei Jahre verdecken — genau den Bereich, um den es geht. */
+    ctx.font = '900 ' + (S.W < 900 ? 14 : 18) + 'px Inter,system-ui,sans-serif';
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(90,231,150,.95)'; ctx.fillText('UNTER ' + REF.name, a.x, y0 + hh + 8);
+    ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(255,120,120,.95)'; ctx.fillText('ÜBER ' + REF.name, a.x + a.w, y0 + hh + 8);
+    ctx.restore();
+  }
+
+  /* ---- Marker: gestaffelt, Hochs rot, Tiefs gruen ----
+     Bewusst ohne Textkästen: die Werte stehen im Tooltip und im Panel,
+     im Bild bleiben nur die Markierungen. Das hält den Chart frei. */
+  if (S.aMK > 0.01 && mP > 0.001) {
+    const items = [];
+    BIGC.forEach(c => { items.push({ i: c.lo, kind: 'low', c }); items.push({ i: c.hi, kind: 'top', c }); });
+    items.sort((x, y) => x.i - y.i);
+    const nI = items.length, ov = 0.5;
+    ctx.save(); ctx.globalAlpha *= S.aMK;
+    items.forEach((m, k) => {
+      const start = (k / nI) * (1 - ov), locT = clamp01((mP - start) / ((1 / nI) * (1 + ov * (nI - 1)) || 1));
+      const lp = clamp01((mP - (k * (1 - ov) / nI)) / (1 / nI));
+      const p = eo(lp); if (p <= 0.001) return;
+      const x = xP(m.i), y = yP(PX[m.i]);
+      const flash = p < 0.55 ? (1 - p / 0.55) : 0;
+      const puls = 1 + 0.09 * Math.sin(now / 1250 * 2 * Math.PI + k * 0.9);
+      const sc = (0.55 + 0.45 * p) * puls;
+      ctx.save(); ctx.globalAlpha *= p;
+      if (m.kind === 'top') {
+        ctx.fillStyle = '#ff4d4d'; ctx.shadowColor = '#ff4d4d'; ctx.shadowBlur = 12 + flash * 34;
+        diamond(ctx, x, y - 15, 8 * sc);
+      } else {
+        ctx.strokeStyle = '#26d17a'; ctx.lineWidth = 2.6; ctx.shadowColor = '#26d17a'; ctx.shadowBlur = 11 + flash * 30;
+        ctx.beginPath(); ctx.arc(x, y + 17, 8 * sc, 0, 7); ctx.stroke();
+        ctx.globalAlpha *= 0.4; ctx.beginPath(); ctx.arc(x, y + 17, 8 * sc + 5 + 4 * Math.sin(now / 1100 * 2 * Math.PI + k), 0, 7); ctx.stroke();
+      }
+      ctx.restore();
+    });
+    ctx.restore();
+  }
+
+  /* ---- Spotlight auf einen Bereich ---- */
+  if (F.spot) {
+    const x0 = xP(F.spot[0]), x1 = xP(F.spot[1]);
+    ctx.save(); ctx.globalAlpha = (F.spotA == null ? 1 : F.spotA) * 0.6; ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, x0, S.H); ctx.fillRect(x1, 0, S.W - x1, S.H); ctx.restore();
+  }
+
+  /* ---- HEUTE-Marker ---- */
+  if (F.today == null ? true : F.today) {
+    const x = xP(H - 1), pu = 0.55 + 0.45 * Math.sin(now / 900 * 2 * Math.PI);
+    ctx.save(); ctx.globalAlpha *= (F.today == null ? 1 : F.today);
+    ctx.strokeStyle = 'rgba(255,255,255,' + (0.28 + 0.22 * pu) + ')'; ctx.lineWidth = 1.5; ctx.setLineDash([5, 6]);
+    ctx.beginPath(); ctx.moveTo(x, a.y); ctx.lineTo(x, a.y + a.h); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = '#fff'; ctx.shadowColor = '#fff'; ctx.shadowBlur = 10 + 12 * pu;
+    ctx.beginPath(); ctx.arc(x, yP(PX[H - 1]), 5, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.font = '800 16px Inter,system-ui,sans-serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+    ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.fillText('HEUTE', x - 8, a.y + 6);
+    ctx.restore();
+  }
+
+  ctx.restore(); /* Datenebene */
+
+  /* ---- Beweis-Box ---- */
+  if (!F.hideBox) drawBox(now, F);
+
+  /* ---- Wasserzeichen: GREAT über WALLY, beide orange, zentriert ---- */
+  ctx.save();
+  const wfs = S.W < 900 ? 26 : 36;
+  /* kräftig genug, damit die Vignette darüber es nicht wegdunkelt */
+  ctx.globalAlpha = 0.95; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.font = '800 ' + wfs + 'px Inter,system-ui,sans-serif';
+  /* Beide Zeilen werden auf dieselbe Breite gezogen und links bündig
+     gesetzt — dadurch stehen sie exakt deckungsgleich übereinander. */
+  const w1 = ctx.measureText(WM1).width;
+  const wA = ctx.measureText(WM2A).width, wB = ctx.measureText(WM2B).width;
+  const w2 = wA + wB;
+  const wTarget = Math.max(w1, w2), wx = 30, wyB = S.H - 14;
+  /* Zeile 1: GREAT weiss */
+  ctx.save(); ctx.translate(wx, wyB - wfs * 1.04); ctx.scale(wTarget / w1, 1);
+  ctx.fillStyle = WM_WEISS; ctx.fillText(WM1, 0, 0); ctx.restore();
+  /* Zeile 2: WALL orange, Y weiss */
+  ctx.save(); ctx.translate(wx, wyB); ctx.scale(wTarget / w2, 1);
+  ctx.fillStyle = WM_ORANGE; ctx.fillText(WM2A, 0, 0);
+  ctx.fillStyle = WM_WEISS; ctx.fillText(WM2B, wA, 0);
+  ctx.restore();
+  ctx.restore();
+
+  /* ---- Vignette LIEGT UEBER den Daten ----
+     Im Standbild bewusst schwach: eine starke Vignette dunkelt Gap-Band
+     und Heat-Strip unterschiedlich stark ab, weil sie an verschiedenen
+     Stellen im Bild liegen — dann stimmen die Farben nicht mehr überein.
+     Für die Filmsequenz wird sie über F.vig hochgezogen. */
+  const vg = F.vig == null ? 0.16 : F.vig;
+  if (vg > 0.01) {
+    const g = ctx.createRadialGradient(S.W / 2, S.H / 2, Math.min(S.W, S.H) * 0.22, S.W / 2, S.H / 2, Math.max(S.W, S.H) * 0.78);
+    g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,' + (0.72 * vg) + ')');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, S.W, S.H);
+  }
+  /* ---- Filmkorn ---- */
+  const gr = F.grain == null ? 0.045 : F.grain;
+  if (gr > 0.004) {
+    ctx.save(); ctx.globalCompositeOperation = 'overlay'; ctx.globalAlpha = gr;
+    const off = (now / 55 | 0) % 160;
+    for (let x = -off; x < S.W; x += 160) for (let y = -off; y < S.H; y += 160) ctx.drawImage(GRAIN, x, y);
+    ctx.restore();
+  }
+  /* ---- Cinemascope-Balken ---- */
+  const bars = F.bars == null ? 0 : F.bars;
+  if (bars > 0.002) { const bh = S.H * 0.12 * bars; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, S.W, bh); ctx.fillRect(0, S.H - bh, S.W, bh); }
+  /* ---- Blitzschnitt ---- */
+  if (F.flash > 0.002) { ctx.fillStyle = 'rgba(255,255,255,' + F.flash + ')'; ctx.fillRect(0, 0, S.W, S.H); }
+
+  /* ---- Banner-Caption oben ---- */
+  if (F.banner) drawBanner(F.banner, F.bannerA == null ? 1 : F.bannerA);
+  /* ---- Vollbild-Text ---- */
+  if (F.text) drawFullText(F.text, F.textA == null ? 1 : F.textA, F.textSub);
+  /* ---- Grosse Zahl mit Bloom ---- */
+  if (F.big) drawBig(F.big, F.bigA == null ? 1 : F.bigA, F.bigSub);
+  /* ---- Monte-Carlo-Overlay ---- */
+  if (F.mcOverlay) drawMcOverlay(F);
+}
+
+function drawBanner(b, al) {
+  ctx.save(); ctx.globalAlpha = al;
+  const cx = S.W / 2, y = S.H * 0.125;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.font = '800 ' + (S.W < 900 ? 14 : 18) + 'px Inter,system-ui,sans-serif';
+  ctx.fillStyle = '#F7931A'; ctx.fillText(b[0].toUpperCase(), cx, y);
+  const fs = S.W < 900 ? 20 : 29, lh = fs * 1.26;
+  ctx.font = '700 ' + fs + 'px Inter,system-ui,sans-serif';
+  ctx.shadowColor = 'rgba(0,0,0,.95)'; ctx.shadowBlur = 16;
+  /* umbrechen, damit lange Erklärtexte nicht aus dem Bild laufen */
+  const lines = wrapT(b[1], Math.min(S.W * 0.72, 980), ctx);
+  const y0 = y + (S.W < 900 ? 20 : 26);
+  ctx.fillStyle = 'rgba(0,0,0,.8)';
+  lines.forEach((l, i) => ctx.fillText(l, cx, y0 + i * lh));
+  ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(255,255,255,.96)';
+  lines.forEach((l, i) => ctx.fillText(l, cx, y0 + i * lh));
+  ctx.restore();
+}
+function drawFullText(t, al, sub) {
+  ctx.save(); ctx.globalAlpha = al;
+  const lines = String(t).split('\n');
+  const fs = S.W < 900 ? 34 : Math.min(70, S.W / 17);
+  ctx.font = '900 ' + fs + 'px Inter,system-ui,sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const lh = fs * 1.16, y0 = S.H / 2 - (lines.length - 1) * lh / 2 - (sub ? fs * 0.4 : 0);
+  ctx.shadowColor = 'rgba(0,0,0,.95)'; ctx.shadowBlur = 26;
+  ctx.fillStyle = 'rgba(0,0,0,.85)'; lines.forEach((l, i) => ctx.fillText(l, S.W / 2, y0 + i * lh));
+  ctx.shadowBlur = 0; ctx.fillStyle = '#fff';
+  lines.forEach((l, i) => ctx.fillText(l, S.W / 2, y0 + i * lh));
+  if (sub) {
+    ctx.font = '700 ' + (S.W < 900 ? 15 : 21) + 'px Inter,system-ui,sans-serif';
+    ctx.fillStyle = '#F7931A'; ctx.fillText(sub, S.W / 2, y0 + lines.length * lh + fs * 0.15);
+  }
+  ctx.restore();
+}
+function drawBig(t, al, sub) {
+  ctx.save(); ctx.globalAlpha = al;
+  const fs = S.W < 900 ? 62 : Math.min(150, S.W / 8.2);
+  ctx.font = '900 ' + fs + 'px Inter,system-ui,sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const y = S.H / 2 - fs * 0.1;
+  ctx.shadowColor = 'rgba(247,147,26,.85)'; ctx.shadowBlur = 60;
+  ctx.fillStyle = '#F7931A'; ctx.fillText(t, S.W / 2, y);
+  ctx.shadowBlur = 22; ctx.fillText(t, S.W / 2, y);
+  if (sub) {
+    ctx.shadowBlur = 0; ctx.font = '800 ' + (S.W < 900 ? 16 : 24) + 'px Inter,system-ui,sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,.95)';
+    String(sub).split('\n').forEach((l, i) => ctx.fillText(l, S.W / 2, y + fs * 0.62 + i * (S.W < 900 ? 22 : 32)));
+  }
+  ctx.restore();
+}
+
+/* ================= Beweis-Box (Inset) ================= */
+/* Unten rechts im Chartbereich, links vom Bedienfeld und über dem
+   Heat-Strip. Die Oberkante wird NICHT geraten, sondern aus den Kurven
+   abgeleitet: sie liegt unter dem tiefsten Punkt, den Kurs, Trend oder
+   Sinuskurve in diesem x-Bereich erreichen. So kann die Box keine Linie
+   und keine Beschriftung überdecken, egal wie die Achse skaliert. */
+/* Die Box hängt bewusst NICHT am Bedienfeld: würde sie sich an dessen
+   Rand ausrichten, änderte sie beim Verschieben des Fensters in jedem
+   Bild ihre Grösse. Ihre Geometrie folgt allein dem Chart und ist damit
+   stabil. Das Bedienfeld ist verschiebbar — es weicht der Box aus,
+   nicht umgekehrt. */
+function boxRect() {
+  const a = area();
+  const right = a.x + a.w - 6;
+  const bottom = a.y + a.h - 8;
+  const amp = Math.sqrt(FULL.co[2] * FULL.co[2] + FULL.co[3] * FULL.co[3]);
+  /* Breite und Höhe hängen zusammen: je weiter die Box nach links reicht,
+     desto tiefer läuft die Kurse-Untergrenze und desto flacher wird sie.
+     Deshalb mehrere Breiten durchrechnen und die größte Fläche nehmen. */
+  function search(minH) {
+    let best = null;
+    for (let f = 0.24; f <= 0.52; f += 0.02) {
+      const w = a.w * f, x = right - w;
+      if (x < a.x + 8) break;
+      let lowest = a.y;
+      for (let i = 0; i < H; i++) {
+        const px = xP(i);
+        if (px < x - 14 || px > right + 14) continue;
+        lowest = Math.max(lowest, yP(PX[i]));
+        if (D[i].inFit) lowest = Math.max(lowest, yP(D[i].trend * Math.exp(-amp)));
+      }
+      const y = lowest + 26, h = bottom - y;
+      if (h < minH) continue;
+      const area2 = w * h;
+      if (!best || area2 > best.area2) best = { x, y, w, h, area2 };
+    }
+    return best;
+  }
+  /* Passt nichts Anständiges mehr, wird die Box weggelassen — lieber keine
+     Box als eine, die auf der Kurve liegt. */
+  const best = search(150) || search(104);
+  if (!best) return null;
+  return { x: best.x, y: best.y, w: best.w, h: best.h };
+}
+function drawBox(now, F) {
+  if (S.W < 780) return;
+  const r = boxRect(); if (!r) return;
+  const al = (F.boxA == null ? 1 : F.boxA);
+  if (al < 0.02) return;
+  ctx.save(); ctx.globalAlpha = al;
+  ctx.fillStyle = 'rgba(9,9,11,.88)'; ctx.strokeStyle = 'rgba(255,255,255,.11)'; ctx.lineWidth = 1;
+  rRect(ctx, r.x, r.y, r.w, r.h, 12); ctx.fill(); ctx.stroke();
+  const m = F.boxMode == null ? S.mode : F.boxMode;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.font = '800 19px Inter,system-ui,sans-serif'; ctx.fillStyle = '#F7931A';
+  const TIT = ['DIE UHR · TIEF → HOCH IN TAGEN', 'DER MOTOR · GEWINN JE ZYKLUS', 'PERIODEN-SCAN · R² JE LÄNGE', 'MONTE CARLO · ' + MC.total + ' PFADE'];
+  ctx.fillText(TIT[m], r.x + 20, r.y + 16);
+  const ix = r.x + 20, iy = r.y + 52, iw = r.w - 40, ih = r.h - 76;
+  if (m === 0) boxClock(ix, iy, iw, ih, F);
+  else if (m === 1) boxEngine(ix, iy, iw, ih, F);
+  else if (m === 2) boxScan(ix, iy, iw, ih, F);
+  else boxMC(ix, iy, iw, ih, now, F);
+  ctx.restore();
+}
+function boxClock(x, y, w, h, F) {
+  const vals = L2T, mx = Math.max(...vals) * 1.12;
+  const bw = Math.min(76, w / (vals.length + 1)), gap = (w - bw * vals.length) / (vals.length + 1);
+  const rev = F.boxProg == null ? 1 : F.boxProg;
+  vals.forEach((v, i) => {
+    const p = clamp01((rev - i * 0.14) / 0.5);
+    const bx = x + gap + i * (bw + gap), bh = (v / mx) * (h - 30) * eo(p);
+    const isLast3 = i >= vals.length - 3;
+    ctx.fillStyle = isLast3 ? 'rgba(56,209,122,.82)' : 'rgba(255,255,255,.25)';
+    rRect(ctx, bx, y + h - 26 - bh, bw, bh, 5); ctx.fill();
+    ctx.font = '800 21px Inter,system-ui,sans-serif'; ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.globalAlpha *= eo(p);
+    ctx.fillText(String(v), bx + bw / 2, y + h - 26 - bh - 22);
+    ctx.font = '700 15px Inter,system-ui,sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.5)';
+    ctx.fillText('Z' + (i + 1), bx + bw / 2, y + h - 20);
+    ctx.globalAlpha = F.boxA == null ? 1 : F.boxA;
+  });
+  ctx.textAlign = 'left'; ctx.font = '700 16px Inter,system-ui,sans-serif';
+  ctx.fillStyle = 'rgba(56,209,122,.95)';
+  ctx.fillText('Letzte 3: Spanne ' + OBS_L2TSPREAD + ' Tage', x, y + h + 2);
+}
+function boxEngine(x, y, w, h, F) {
+  const vals = BIGC.map(c => c.gain), mx = Math.log(Math.max(...vals) * 1.5), mn = 0;
+  const bw = Math.min(76, w / (vals.length + 1)), gap = (w - bw * vals.length) / (vals.length + 1);
+  const rev = F.boxProg == null ? 1 : F.boxProg;
+  const pts = [];
+  vals.forEach((v, i) => {
+    const p = clamp01((rev - i * 0.14) / 0.5);
+    const bx = x + gap + i * (bw + gap), bh = ((Math.log(v) - mn) / (mx - mn)) * (h - 30) * eo(p);
+    ctx.fillStyle = 'rgba(255,77,77,.78)';
+    rRect(ctx, bx, y + h - 26 - bh, bw, bh, 5); ctx.fill();
+    pts.push([bx + bw / 2, y + h - 26 - bh]);
+    ctx.font = '800 21px Inter,system-ui,sans-serif'; ctx.textAlign = 'center';
+    ctx.save(); ctx.globalAlpha *= eo(p);
+    ctx.fillStyle = 'rgba(255,255,255,.95)';
+    ctx.fillText(v >= 100 ? Math.round(v) + '×' : v.toFixed(1) + '×', bx + bw / 2, y + h - 26 - bh - 22);
+    ctx.font = '700 15px Inter,system-ui,sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.5)';
+    ctx.fillText('Z' + (i + 1), bx + bw / 2, y + h - 20);
+    ctx.restore();
+  });
+  if (rev > 0.75 && pts.length > 1) {
+    ctx.save(); ctx.globalAlpha *= clamp01((rev - 0.75) / 0.25);
+    ctx.strokeStyle = 'rgba(255,209,102,.9)'; ctx.lineWidth = 2; ctx.setLineDash([5, 4]);
+    ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke();
+    ctx.setLineDash([]); ctx.restore();
+  }
+  ctx.textAlign = 'left'; ctx.font = '700 16px Inter,system-ui,sans-serif';
+  ctx.fillStyle = 'rgba(255,209,102,.95)';
+  ctx.fillText('Faktor ' + DECAY_FACTOR.toFixed(2) + ' schwächer je Zyklus (R² ' + DEC.r2.toFixed(3) + ', n=' + BIGC.length + ')', x, y + h + 2);
+}
+function boxScan(x, y, w, h, F) {
+  const pts = SCAN.filter(s => s.P >= 2 && s.P <= 7);
+  const mxR = Math.max(...pts.map(s => s.r2)) * 1.15;
+  const px = P => x + (P - 2) / 5 * w, py = v => y + h - 22 - (v / mxR) * (h - 30);
+  const rev = F.boxProg == null ? 1 : F.boxProg;
+  ctx.strokeStyle = 'rgba(255,255,255,.12)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x, y + h - 22); ctx.lineTo(x + w, y + h - 22); ctx.stroke();
+  ctx.save(); ctx.beginPath(); ctx.rect(x, y - 4, w * eo(rev), h); ctx.clip();
+  ctx.strokeStyle = '#F7931A'; ctx.lineWidth = 2.4; ctx.beginPath();
+  pts.forEach((s, i) => { const X = px(s.P), Y = py(s.r2); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
+  ctx.stroke(); ctx.restore();
+  /* Marke bei 4,00 Jahren */
+  [[BESTP.P, '#38d17a', BESTP.P.toFixed(2).replace('.', ',') + ' J'], [4, '#ff4d4d', '4,00 J']].forEach(([P, col, lab]) => {
+    const X = px(P), Y = py(P === 4 ? R2_AT4 : BESTP.r2);
+    ctx.strokeStyle = col; ctx.lineWidth = 1.3; ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(X, Y); ctx.lineTo(X, y + h - 22); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = col; ctx.beginPath(); ctx.arc(X, Y, 4, 0, 7); ctx.fill();
+    ctx.font = '700 15px Inter,system-ui,sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(lab, X, y + h - 18);
+  });
+  ctx.textAlign = 'left'; ctx.font = '700 16px Inter,system-ui,sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.8)';
+  ctx.fillText('R² bei 4 J: ' + R2_AT4.toFixed(3).replace('.', ',') + '  ·  Bestwert: ' + BESTP.r2.toFixed(3).replace('.', ','), x, y + h + 2);
+}
+function boxMC(x, y, w, h, now, F) {
+  const done = MC.done;
+  if (!done) {
+    ctx.font = '700 15px Inter,system-ui,sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.textAlign = 'center';
+    ctx.fillText('Noch nicht gerechnet.', x + w / 2, y + h / 2 - 16);
+    ctx.fillText('Panel: „Zufallspfade rechnen"', x + w / 2, y + h / 2 + 2);
+    return;
+  }
+  const pS = MC.sineGE / done, pT = MC.topEligible ? MC.topTighter / MC.topEligible : 0;
+  const bars = [
+    { lab: 'Sinuszyklus stärker', v: pS, col: '#ff4d4d', txt: MC.sineGE + ' / ' + done + '  =  ' + (pS * 100).toFixed(1) + ' %' },
+    { lab: 'Timing pünktlicher', v: pT, col: '#38d17a', txt: MC.topTighter + ' / ' + MC.topEligible + '  =  ' + (pT * 100).toFixed(2) + ' %' }
+  ];
+  const scale = 0.30; /* 30 % = volle Breite */
+  bars.forEach((b, i) => {
+    const by = y + 6 + i * 68;
+    ctx.font = '700 16px Inter,system-ui,sans-serif'; ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(255,255,255,.78)'; ctx.fillText(b.lab, x, by);
+    ctx.fillStyle = 'rgba(255,255,255,.09)'; rRect(ctx, x, by + 20, w, 19, 6); ctx.fill();
+    const bw = Math.max(3, Math.min(1, b.v / scale) * w);
+    ctx.fillStyle = b.col; ctx.shadowColor = b.col; ctx.shadowBlur = 14;
+    rRect(ctx, x, by + 20, bw, 19, 6); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.font = '800 17px Inter,system-ui,sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.92)';
+    ctx.fillText(b.txt, x, by + 45);
+  });
+  ctx.font = '700 15px Inter,system-ui,sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.5)';
+  ctx.fillText('Gleiche Daten, gleicher Test, gegenteiliges Urteil.', x, y + h - 6);
+}
+/* Vollbild-Overlay fuer die Kernszene */
+function drawMcOverlay(F) {
+  const al = F.mcOverlay;
+  ctx.save(); ctx.globalAlpha = al;
+  const cx = S.W / 2, cy = S.H * 0.5;
+  ctx.textAlign = 'center';
+  ctx.font = '900 ' + (S.W < 900 ? 46 : 76) + 'px Inter,system-ui,sans-serif';
+  ctx.fillStyle = '#fff'; ctx.shadowColor = 'rgba(0,0,0,.9)'; ctx.shadowBlur = 24;
+  ctx.textBaseline = 'middle';
+  ctx.fillText(MC.done.toLocaleString('de-DE'), cx, cy - (S.W < 900 ? 96 : 138));
+  ctx.font = '800 ' + (S.W < 900 ? 13 : 17) + 'px Inter,system-ui,sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,.7)';
+  ctx.fillText('ZUFALLSPFADE MIT BITCOINS DRIFT UND VOLATILITÄT', cx, cy - (S.W < 900 ? 62 : 92));
+  const done = Math.max(1, MC.done);
+  const pS = MC.sineGE / done, pT = MC.topEligible ? MC.topTighter / MC.topEligible : 0;
+  const bw = Math.min(660, S.W * 0.6), bx = cx - bw / 2;
+  [['ZUFALL ZEIGT STÄRKEREN SINUS-ZYKLUS', pS, '#ff4d4d', MC.sineGE + ' von ' + done],
+   ['ZUFALL IST PÜNKTLICHER ALS BITCOIN', pT, '#38d17a', MC.topTighter + ' von ' + MC.topEligible]
+  ].forEach((b, i) => {
+    const by = cy - 24 + i * 96;
+    ctx.textAlign = 'left'; ctx.font = '800 ' + (S.W < 900 ? 12 : 15) + 'px Inter,system-ui,sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.shadowBlur = 10; ctx.fillText(b[0], bx, by);
+    ctx.fillStyle = 'rgba(255,255,255,.1)'; ctx.shadowBlur = 0; rRect(ctx, bx, by + 14, bw, 26, 8); ctx.fill();
+    const fw = Math.max(3, Math.min(1, b[1] / 0.30) * bw);
+    ctx.fillStyle = b[2]; ctx.shadowColor = b[2]; ctx.shadowBlur = 20; rRect(ctx, bx, by + 14, fw, 26, 8); ctx.fill();
+    ctx.shadowBlur = 0; ctx.font = '900 ' + (S.W < 900 ? 20 : 27) + 'px Inter,system-ui,sans-serif';
+    ctx.fillStyle = b[2]; ctx.textAlign = 'left';
+    ctx.fillText((b[1] * 100).toFixed(b[1] < 0.05 ? 2 : 1).replace('.', ',') + ' %', bx + fw + 14, by + 34);
+    ctx.font = '700 ' + (S.W < 900 ? 11 : 13) + 'px Inter,system-ui,sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fillText(b[3], bx, by + 58);
+  });
+  ctx.restore();
+}
+
+/* ================= Bedienung ================= */
+const TGL = 900, _tw = {};
+function setToggle(k, on) { _tw[k] = { from: S[k], to: on ? 1 : 0, t0: performance.now() }; }
+function tweenToggles(now) {
+  let live = false;
+  for (const k in _tw) { const a = _tw[k]; if (!a) continue; const p = clamp01((now - a.t0) / TGL); S[k] = a.from + (a.to - a.from) * eo(p); if (p < 1) live = true; else _tw[k] = null; }
+  return live;
+}
+let idleRAF = null;
+function loop(now) {
+  const live = tweenToggles(now);
+  if (!S.cinema) render(now);
+  idleRAF = requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* --- Statistik-Kacheln --- */
+function updateStats() {
+  const i = S.hover >= 0 ? S.hover : H - 1, d = D[i], R = currentRef();
+  const rv = R.vals[i], rz = R.z[i], rat = d.inFit ? d.price / rv : null;
+  document.getElementById('s-px').textContent = fmtUSD(d.price);
+  document.getElementById('k-ref').textContent = R.kurz === 'Modell' ? 'Sinus-Modell' : 'Power-Law-Trend';
+  document.getElementById('s-tr').textContent = d.inFit ? fmtUSD(rv) : '—';
+  const ra = document.getElementById('s-ra');
+  if (d.inFit) { ra.textContent = rat.toFixed(2).replace('.', ',') + '×'; ra.style.color = rat >= 1 ? '#ff6b6b' : '#38d17a'; }
+  else { ra.textContent = '—'; ra.style.color = '#fff'; }
+  const zz = document.getElementById('s-z');
+  if (d.inFit) { zz.textContent = (rz >= 0 ? '+' : '') + rz.toFixed(2).replace('.', ','); zz.style.color = heatCol(rz, 1); }
+  else { zz.textContent = '—'; }
+  const dTop = Math.round((i - lastATHi) * 7);
+  document.getElementById('s-dt').textContent = dTop >= 0 ? dTop + ' T' : '—';
+  const dd = 1 - d.price / PX[lastATHi];
+  document.getElementById('s-dd').textContent = (dd > 0 ? '−' : '+') + Math.abs(dd * 100).toFixed(1).replace('.', ',') + ' %';
+}
+updateStats();
+
+/* --- Tooltip --- */
+const tip = document.getElementById('tip');
+cvs.addEventListener('mousemove', e => {
+  const a = area();
+  if (e.clientX < a.x - 20 || e.clientX > a.x + a.w + 20) { S.hover = -1; tip.style.display = 'none'; updateStats(); return; }
+  S.hover = idxAtX(e.clientX);
+  const d = D[S.hover];
+  const R = currentRef();
+  let html = '<div class="d">' + fmtD(d.date) + '</div>';
+  html += '<div class="l"><span>Kurs</span><span style="color:#fff">' + fmtUSD(d.price) + '</span></div>';
+  if (d.inFit) {
+    const isM = R.kurz === 'Modell';
+    html += '<div class="l"><span>' + (isM ? 'Sinus-Modell' : 'Power-Law-Trend') + '</span><span style="color:' + (isM ? '#78beff' : '#F7931A') + '">' + fmtUSD(R.vals[S.hover]) + '</span></div>';
+    if (isM) html += '<div class="l"><span>Power-Law-Trend</span><span style="color:#F7931A">' + fmtUSD(d.trend) + '</span></div>';
+    const gp = d.price / R.vals[S.hover] - 1;
+    html += '<div class="l"><span>Abstand</span><span style="color:' + (gp >= 0 ? '#ff6b6b' : '#38d17a') + '">' + (gp >= 0 ? '+' : '−') + Math.abs(gp * 100).toFixed(1).replace('.', ',') + ' %</span></div>';
+    html += '<div class="l"><span>Z-Wert</span><span style="color:' + heatCol(R.z[S.hover], 1) + '">' + (R.z[S.hover] >= 0 ? '+' : '') + R.z[S.hover].toFixed(2).replace('.', ',') + '</span></div>';
+  }
+  tip.innerHTML = html; tip.style.display = 'block';
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  tip.style.left = Math.min(S.W - tw - 12, Math.max(12, e.clientX + 18)) + 'px';
+  tip.style.top = Math.min(S.H - th - 12, Math.max(12, e.clientY - th - 14)) + 'px';
+  updateStats(); render();
+});
+cvs.addEventListener('mouseleave', () => { S.hover = -1; tip.style.display = 'none'; updateStats(); render(); });
+
+/* --- Panel --- */
+const ph = document.getElementById('panel-header'), panel = document.getElementById('panel');
+ph.addEventListener('mousedown', e => { if (e.target.id === 'panel-toggle') return; S.drag = { x: e.clientX - panel.offsetLeft, y: e.clientY - panel.offsetTop }; ph.style.cursor = 'grabbing'; });
+document.addEventListener('mousemove', e => {
+  if (!S.drag) return;
+  /* im Bild halten: sonst rutscht das Fenster hinter den Rand und ist
+     nicht mehr zu greifen */
+  const pw = panel.offsetWidth, phh = panel.offsetHeight;
+  const nx = Math.max(6, Math.min(window.innerWidth - pw - 6, e.clientX - S.drag.x));
+  const ny = Math.max(6, Math.min(window.innerHeight - phh - 6, e.clientY - S.drag.y));
+  panel.style.right = 'auto'; panel.style.left = nx + 'px'; panel.style.top = ny + 'px';
+});
+document.addEventListener('mouseup', () => { S.drag = null; ph.style.cursor = 'grab'; });
+document.getElementById('panel-toggle').addEventListener('click', () => {
+  panel.classList.toggle('collapsed');
+  document.getElementById('panel-toggle').textContent = panel.classList.contains('collapsed') ? '▶' : '◀';
+});
+
+/* --- Regler --- */
+document.getElementById('sl-per').addEventListener('input', e => {
+  S.period = +e.target.value / 100;
+  document.getElementById('v-per').textContent = S.period.toFixed(2).replace('.', ',') + ' J';
+  updateStats(); render();   /* Bezug haengt an der Periode */
+});
+document.getElementById('sl-cut').addEventListener('input', e => {
+  S.cutYear = +e.target.value;                 /* Schnitt am 31.12. des Vorjahres */
+  document.getElementById('v-cut').textContent = S.cutYear - 1;
+  if (S.aOOS < 0.5) { document.getElementById('tg-oos').classList.add('on'); setToggle('aOOS', true); }
+  render();
+});
+document.getElementById('sl-sim').addEventListener('input', e => {
+  S.nsim = +e.target.value;
+  document.getElementById('v-sim').textContent = S.nsim;
+  mcReset(S.nsim); updateMcNote();
+  document.getElementById('mcbtn').textContent = '▶ ZUFALLSPFADE RECHNEN';
+  render();
+});
+/* --- Ebenen --- */
+[['tg-tr', 'aTrend'], ['tg-si', 'aSine'], ['tg-gp', 'aGap'], ['tg-hs', 'aHS'], ['tg-mk', 'aMK'], ['tg-oos', 'aOOS']].forEach(([id, key]) => {
+  document.getElementById(id).addEventListener('click', () => {
+    const el = document.getElementById(id); el.classList.toggle('on'); setToggle(key, el.classList.contains('on'));
+  });
+});
+/* --- Bezug fuer Band und Heat-Strip --- */
+document.getElementById('tg-ref').addEventListener('click', () => {
+  const el = document.getElementById('tg-ref');
+  el.classList.toggle('on');
+  S.ref = el.classList.contains('on') ? 'model' : 'trend';
+  updateStats(); render();
+});
+/* --- Beweis-Box-Modus --- */
+document.querySelectorAll('.mode').forEach(el => el.addEventListener('click', () => {
+  document.querySelectorAll('.mode').forEach(x => x.classList.remove('on'));
+  el.classList.add('on'); S.mode = +el.dataset.m; render();
+}));
+/* --- Monte Carlo --- */
+document.getElementById('mcbtn').addEventListener('click', () => {
+  mcReset(S.nsim); MC.running = true;
+  document.getElementById('mcbtn').disabled = true;
+  document.getElementById('mcbtn').textContent = 'RECHNET …';
+  document.querySelectorAll('.mode').forEach(x => x.classList.remove('on'));
+  document.querySelector('.mode[data-m="3"]').classList.add('on'); S.mode = 3;
+  requestAnimationFrame(mcPump);
+});
+
+/* --- Teilen --- */
+const SHTXT = 'Bitcoins Vierjahreszyklus: die Uhr läuft, der Motor schrumpft.';
+document.getElementById('sh-wa').onclick = e => { e.preventDefault(); window.open('https://wa.me/?text=' + encodeURIComponent(SHTXT + ' ' + location.href)); };
+document.getElementById('sh-x').onclick = e => { e.preventDefault(); window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(SHTXT)); };
+document.getElementById('sh-yt').onclick = e => { e.preventDefault(); window.open('https://www.youtube.com/@WalletGreat'); };
+document.getElementById('sh-ln').onclick = e => { e.preventDefault(); navigator.clipboard && navigator.clipboard.writeText(location.href); };
+
+/* --- Eingaben --- */
+let kb = [];
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { if (S.cinema) { S.cinema = null; render(); } return; }
+  kb.push({ k: e.key.toLowerCase(), t: Date.now() });
+  kb = kb.filter(x => Date.now() - x.t < 600);
+  const s = kb.map(x => x.k).join('');
+  if (s.endsWith('st')) { kb = []; startCinema(); }
+  else if (s.endsWith('ar')) { kb = []; startExplainer(); }
+});
+
+/* ================= Mind-Shift Cinema ================= */
+function startCinema() {
+  if (S.cinema) return;
+  mcReset(2000);
+  const ghosts = [];
+  const t0 = performance.now();
+  S.cinema = { t0 };
+  const DUR = 64000;
+
+  /* Hook-Beats: erst in eine Richtung, dann die Kehrtwende, dann Zahlen */
+  const BEATS = [
+    [300, 3200, 'DER VIERJAHRESZYKLUS\nIST TOT'],
+    [3200, 6100, 'SAGEN SIE SEIT OKTOBER\nDAS HOCH KAM ZU FRÜH'],
+    [6100, 9000, '123.515 DOLLAR\nDANN MINUS 52 PROZENT'],
+    [9000, 12000, 'ICH HABE DIE UHR\nNACHGEMESSEN'],
+    [12000, 15200, '1064 · 1064 · 1050 TAGE\nDREI ZYKLEN — 14 TAGE UNTERSCHIED'],
+    [15200, 18000, 'DER ZYKLUS IST NICHT TOT\nER IST NUR LEISER GEWORDEN']
+  ];
+
+  function frame(now) {
+    if (!S.cinema) return;
+    const t = now - t0;
+    if (t > DUR) { S.cinema = null; render(now); return; }
+    const F = {};
+
+    /* --- Akt 1: Der Haken --- */
+    if (t < 18400) {
+      F.bars = eo(seg(t, 0, 700));
+      F.grain = 0.085; F.vig = 0.9;
+      F.priceProg = 0; F.priceAlpha = 0; F.axProg = 0; F.trendProg = 0; F.sineProg = 0;
+      F.mkProg = 0; F.hsProg = 0; F.today = 0; F.hideBox = true;
+      for (const [a, b, txt] of BEATS) {
+        if (t >= a && t < b) {
+          const inA = seg(t, a, a + 420), outA = 1 - seg(t, b - 380, b);
+          F.text = txt; F.textA = Math.min(inA, outA);
+        }
+      }
+      requestAnimationFrame(frame); render(now, F); return;
+    }
+
+    /* --- Akt 2: Die Welt --- */
+    F.bars = 1 - eo(seg(t, 18400, 19800)) * (1 - 0.35);
+    F.grain = 0.085 - 0.04 * seg(t, 18400, 21000);
+    F.vig = 0.9 - 0.3 * seg(t, 18400, 21000);
+    F.flash = t < 18900 ? (1 - seg(t, 18400, 18900)) * 0.75 : 0;
+    F.axProg = eo(seg(t, 18800, 20600));
+    F.priceAlpha = 1;
+    F.priceProg = eo(seg(t, 19600, 25600));
+    F.trendProg = 0; F.sineProg = 0; F.mkProg = 0; F.hsProg = 0;
+    F.today = seg(t, 24800, 26000);
+    F.hideBox = true;
+    F.push = seg(t, 19000, 40000) * 0.55;
+    if (t >= 20200 && t < 26000) { F.banner = ['DIE DATEN', '871 Wochenschlusskurse seit 2009 — logarithmische Achse']; F.bannerA = Math.min(seg(t, 20200, 20900), 1 - seg(t, 25400, 26000)); }
+
+    /* --- Akt 3: Das Modell --- */
+    if (t >= 25600) {
+      F.trendProg = eo(seg(t, 26000, 30600));
+      if (t >= 26300 && t < 31200) { F.banner = ['DER TREND', 'Power Law aus 837 Wochen · R² ' + TREND.r2.toFixed(2).replace('.', ',')]; F.bannerA = Math.min(seg(t, 26300, 27000), 1 - seg(t, 30600, 31200)); }
+    }
+
+    /* --- Akt 4: Die Beweislage --- */
+    if (t >= 30600) {
+      /* linear, damit die Staffelung gleichmaessig ueber das ganze
+         Fenster laeuft — mit ease-out waeren nach einer Sekunde alle da */
+      F.mkProg = seg(t, 30800, 36800);
+      F.hsProg = eo(seg(t, 32200, 36900));
+      F.hideBox = t < 33000;
+      F.boxMode = 0; F.boxA = seg(t, 33000, 34000); F.boxProg = eo(seg(t, 33400, 36400));
+      if (t >= 31400 && t < 37600) { F.banner = ['DIE UHR', 'Tief → Hoch: ' + last3(L2T).join(' · ') + ' Tage — Spanne ' + OBS_L2TSPREAD + ' Tage']; F.bannerA = Math.min(seg(t, 31400, 32100), 1 - seg(t, 37000, 37600)); }
+    }
+
+    /* --- Akt 5: Die Wende --- */
+    if (t >= 37600) {
+      const w = seg(t, 37600, 39400);
+      F.dim = w * 0.9; F.push = 0.55 * (1 - eo(w)); F.boxA = (1 - w);
+      F.grain = 0.045 + 0.06 * w; F.vig = 0.6 + 0.3 * w;
+      F.bars = 0.35 + 0.65 * eo(seg(t, 38400, 39600));
+      if (t >= 39200 && t < 39500) F.flash = (1 - seg(t, 39200, 39500)) * 0.85;
+      if (t >= 39400 && t < 43200) {
+        F.text = 'ALS PREISWELLE\nIST DER ZYKLUS\nNICHTS BESONDERES';
+        F.textA = Math.min(seg(t, 39500, 40100), 1 - seg(t, 42600, 43200));
+      }
+    }
+
+    /* --- Akt 6: Die Kernszene — Monte Carlo --- */
+    if (t >= 43200) {
+      const k = seg(t, 43200, 44600);
+      F.dim = 0.9 * (1 - k * 0.55);
+      F.bars = 1 - 0.65 * eo(k);
+      F.priceAlpha = 1 - 0.72 * eo(k);
+      F.trendProg = 1; F.mkProg = 1; F.hsProg = 1; F.today = 1;
+      F.hideBox = true;
+      /* echte Simulationen waehrend der Szene rechnen.
+         Das Zeitbudget je Bild waechst gegen Ende, und ab 52,8 s wird der
+         Rest in einem Zug fertig gerechnet — die Endzahl muss stimmen,
+         egal wie schnell der Rechner ist. */
+      if (t >= 44000 && MC.done < 2000) {
+        const budget = performance.now();
+        const ms = t >= 52800 ? 1e9 : t >= 50000 ? 26 : 11;
+        while (MC.done < 2000 && performance.now() - budget < ms) {
+          mcOne();
+          if (MC.done % 50 === 0 && ghosts.length < 46) ghosts.push(Float64Array.from(MC.lastPath));
+        }
+      }
+      F.ghosts = ghosts; F.ghostAlpha = eo(seg(t, 44000, 46000)) * (1 - 0.55 * seg(t, 52000, 54200));
+      F.mcOverlay = Math.min(seg(t, 45200, 46400), 1 - seg(t, 53400, 54400));
+      if (t >= 44200 && t < 53600) {
+        F.banner = ['DER TEST', 'Dieselbe Zyklus-Suche auf reinen Zufallspfaden — Bitcoins Drift, Bitcoins Volatilität'];
+        F.bannerA = Math.min(seg(t, 44200, 44900), 1 - seg(t, 53000, 53600));
+      }
+    }
+
+    /* --- Akt 7: Das Urteil --- */
+    if (t >= 54400) {
+      F.ghosts = null; F.mcOverlay = 0;
+      F.dim = 0.9 * (1 - seg(t, 57800, 59600));
+      F.priceAlpha = 0.28 + 0.72 * seg(t, 57800, 59600);
+      F.bars = 0.35 + 0.65 * (1 - seg(t, 57800, 59200));
+      if (t >= 54600 && t < 58600) {
+        F.big = Math.round(GAIN_SPAN) + '×';
+        F.bigA = Math.min(seg(t, 54600, 55400), 1 - seg(t, 58000, 58600));
+        F.bigSub = 'So viel stärker war der erste Zyklus als der letzte\nbei ' + OBS_L2TSPREAD + ' Tagen Unterschied in der Dauer';
+      }
+    }
+
+    /* --- Akt 8: Abspann --- */
+    if (t >= 58600) {
+      F.dim = 0.9 * (1 - eo(seg(t, 58600, 60200)));
+      F.priceAlpha = 0.28 + 0.72 * eo(seg(t, 58600, 60200));
+      F.bars = 0.35 * (1 - seg(t, 60000, 61600));
+      F.push = 0; F.grain = 0.04; F.vig = 0.55;
+      F.hideBox = false; F.boxMode = 1; F.boxA = seg(t, 59400, 60400); F.boxProg = eo(seg(t, 59600, 62000));
+      F.trendProg = 1; F.sineProg = 0; F.mkProg = 1; F.hsProg = 1; F.today = 1; F.priceProg = 1;
+      if (t >= 59800) {
+        F.banner = ['DER MOTOR', BIGC.map(c => (c.gain >= 100 ? Math.round(c.gain) : c.gain.toFixed(1).replace('.', ',')) + '×').join(' → ') + '  je Zyklus'];
+        F.bannerA = Math.min(seg(t, 59800, 60500), 1 - seg(t, 63000, 64000));
+      }
+    }
+
+    render(now, F);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ================= Forschungsweg-Protokoll =================
+   Nur fuer den Kanalbetreiber. Legt offen, woher die Daten stammen,
+   was in dieser Datei gerechnet wird und was NICHT belegt ist.       */
+function startExplainer() {
+  if (S.cinema) return;
+  const t0 = performance.now(); S.cinema = { t0 };
+  const k2 = n => n.toFixed(2).replace('.', ',');
+  const k3 = n => n.toFixed(3).replace('.', ',');
+  const STEPS = [
+    [0, 10000, '1 · WOHER DIE FRAGE KAM',
+      'Aus der öffentlichen Debatte im Sommer 2026 über das Ende des Vierjahreszyklus. Übernommen wurde daraus ausschliesslich die Fragestellung — keine einzige Kennzahl.'],
+    [10000, 21000, '2 · WOHER DIE KURSE KAMEN',
+      'TradingView INDEX:BTCUSD, Wochenschlusskurse, Export vom 3. August 2026. ' + H + ' Wochen von ' + DATES[0] + ' bis ' + DATES[H - 1] + '. Dieselbe Reihe wie in der Episode vom 7. August, dort gegen einen unabhängigen Pressebericht geprüft: Abweichung 0,03 Prozent.'],
+    [21000, 32000, '3 · WARUM DER START ' + DATES[I0F].split('-').reverse().join('.') + ' IST',
+      'Vor Mitte 2010 gab es keinen funktionierenden Börsenhandel. Diese ' + I0F + ' Wochen sind als Kurslinie sichtbar, gehen aber in keine Schätzung ein. Geschätzt wird auf ' + (H - I0F) + ' Wochen.'],
+    [32000, 43000, '4 · WAS HIER GERECHNET WIRD',
+      'Alles. Trend, Perioden-Scan, Zyklusdefinition, Monte Carlo und Out-of-Sample laufen beim Laden dieser Datei aus den eingebetteten Rohdaten. Es ist keine Zahl fest eingetragen.'],
+    [43000, 54000, '5 · DER TREND',
+      'Power Law: ln(Kurs) = ' + k2(TREND.a) + ' + ' + k2(TREND.b) + ' · ln(Jahre seit Genesis) · R² ' + k3(TREND.r2) + '. Alternativen sind mitgerechnet: log-linear R² ' + k3(TREND_ALT.linR2) + ', quadratisch R² ' + k3(TREND_ALT.quadR2) + '.'],
+    [54000, 65000, '6 · DIE ZYKLUS-DEFINITION',
+      'Hoch = Allzeithoch mit späterem Rückgang von 50 Prozent, Mindestabstand 78 Wochen. Tief = tiefster Wochenschluss dazwischen. Dieselbe Definition gilt für Bitcoin UND für jeden Zufallspfad — sonst wäre der Vergleich wertlos.'],
+    [65000, 77000, '7 · DIE NULLHYPOTHESE',
+      'Irrfahrten mit Bitcoins eigener Drift (' + MU.toFixed(5).replace('.', ',') + ' je Woche) und Volatilität (' + SD.toFixed(5).replace('.', ',') + '). Fester Startwert ' + MC_SEED + ' — jeder Lauf ist exakt wiederholbar.'],
+    [77000, 89000, '8 · DAS GETEILTE ERGEBNIS',
+      () => MC.done
+        ? 'Nach ' + MC.done + ' Pfaden: Sinuszyklus stärker als Bitcoin in ' + MC.sineGE + ' Fällen (' + k2(MC.sineGE / MC.done * 100) + ' %). Timing pünktlicher in ' + MC.topTighter + ' von ' + MC.topEligible + '. Gleiche Daten, gleicher Test, gegenteiliges Urteil.'
+        : 'Noch nicht gerechnet — Knopf „Zufallspfade rechnen" im Panel drücken. Erwartung: als Preiswelle schlägt rund jeder fünfte Zufallspfad Bitcoin, als Uhr fast keiner.'],
+    [89000, 101000, '9 · WAS NICHT BELEGT IST',
+      'Der Zerfallsfaktor ' + k2(DECAY_FACTOR) + ' beruht auf ' + BIGC.length + ' Punkten und liefert zwei Schritte weiter ein Hoch unter dem Tief. Die Sinusperiode ' + k2(BESTP.P) + ' Jahre gilt nur unter dem Power-Law-Trend; ereignisbasiert sind es ' + k2(EVENT_PERIOD) + '. Keine Kursprognose.'],
+    [101000, 113000, '10 · DER RENDITETEST — BEWUSST VERWORFEN',
+      (() => {
+        const om = 2 * Math.PI / BESTP.P, amp = Math.sqrt(FULL.co[2] ** 2 + FULL.co[3] ** 2);
+        const erw = 0.5 * Math.pow(amp * om / 52.1775, 2) / (SD * SD);
+        return 'Auf Wochenrenditen bricht das R² auf ' + k3(RET_TEST) + ' ein. Aber ein echter Zyklus dieser Amplitude erzeugt rechnerisch nur ' + k3(erw) + ' — der Test hat hier keine Trennschärfe und wird deshalb nicht als Beleg verwendet. Offen gesagt statt still weggelassen.';
+      })()],
+    [113000, 126000, '11 · SO PRÜFST DU MICH NACH',
+      'Regler und Knöpfe im Panel rechnen alles neu. Schätzfenster verschieben, Periode verstellen, Zufallspfade selbst laufen lassen. Weicht eine Zahl im Video vom Chart ab, gilt der Chart.']
+  ];
+  const DUR = 127000;
+  function frame(now) {
+    if (!S.cinema) return;
+    const t = now - t0;
+    if (t > DUR) { S.cinema = null; render(now); return; }
+    const F = { bars: 0.22, grain: 0.03, vig: 0.5 };
+    for (const [a, b, lab, txt] of STEPS) {
+      if (t >= a && t < b) {
+        F.banner = [lab, typeof txt === 'function' ? txt() : txt];
+        F.bannerA = Math.min(seg(t, a, a + 500), 1 - seg(t, b - 500, b));
+      }
+    }
+    F.boxMode = t < 77000 ? 0 : t < 89000 ? 1 : t < 101000 ? 2 : 3;
+    render(now, F);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ---- Erststart ----
+   Der Perioden-Regler wird auf den tatsächlichen Bestwert gesetzt, nicht
+   auf eine fest eingetragene Zahl. */
+(function initPeriod() {
+  const el = document.getElementById('sl-per');
+  el.value = String(Math.round(BESTP.P * 100));
+  S.period = +el.value / 100;
+  document.getElementById('v-per').textContent = S.period.toFixed(2).replace('.', ',') + ' J';
+})();
+view(); updateStats(); render();
+
+</script>
